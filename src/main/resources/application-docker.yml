@@ -1,15 +1,6 @@
 server:
   port: ${SERVER_PORT:8080}
 
-spring:
-  datasource:
-    # Compose 서비스명 `mysql` (호스트 localhost 가 아님)
-    url: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:plip_chat}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-
 eureka:
   instance:
     # plip-net Compose DNS — Gateway 컨테이너에서 chat:8080 으로 접근

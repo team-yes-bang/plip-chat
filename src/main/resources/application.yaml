@@ -3,14 +3,16 @@ spring:
     name: chat # Eureka 등록명 — 소문자·하이픈 (Gateway lb://chat 과 동일)
   profiles:
     active: local
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-  jpa:
-    properties:
-      hibernate:
-        format_sql: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27017/plip_chat?replicaSet=rs0}
+  data:
+    mongodb:
+      auto-index-creation: true
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 eureka:
   instance:

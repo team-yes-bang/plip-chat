@@ -5,6 +5,9 @@ spring:
     active: local
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: chat-agit-read-model
+      auto-offset-reset: earliest
   mongodb:
     uri: ${MONGODB_URI:mongodb://localhost:27017/plip_chat?replicaSet=rs0}
   data:

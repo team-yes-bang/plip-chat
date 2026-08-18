@@ -1,4 +1,4 @@
-package com.plip.template;
+package com.plip.chat;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

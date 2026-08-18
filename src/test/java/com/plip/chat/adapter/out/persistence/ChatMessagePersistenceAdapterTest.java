@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.mongodb.core.MongoTemplate;
 
 import java.time.Instant;
 import java.util.List;
@@ -25,13 +26,17 @@ class ChatMessagePersistenceAdapterTest {
 	@Mock
 	private ChatMessageMongoRepository chatMessageMongoRepository;
 
+	@Mock
+	private MongoTemplate mongoTemplate;
+
 	private ChatMessagePersistenceAdapter chatMessagePersistenceAdapter;
 
 	@BeforeEach
 	void setUp() {
 		chatMessagePersistenceAdapter = new ChatMessagePersistenceAdapter(
 				chatMessageMongoRepository,
-				new ChatMessagePersistenceMapper()
+				new ChatMessagePersistenceMapper(),
+				mongoTemplate
 		);
 	}
 

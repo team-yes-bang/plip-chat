@@ -1,14 +1,12 @@
 package com.plip.chat.application.service;
 
-import com.plip.chat.application.port.out.ChatMessagePersistencePort;
 import com.plip.chat.domain.model.ChatMessage;
 import com.plip.chat.domain.model.MessageType;
+import com.plip.chat.support.InMemoryChatMessagePersistence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -22,7 +20,7 @@ class ChatMessageServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		chatMessageService = new ChatMessageService(new InMemoryChatMessagePersistencePort());
+		chatMessageService = new ChatMessageService(new InMemoryChatMessagePersistence());
 	}
 
 	@Test
@@ -85,24 +83,5 @@ class ChatMessageServiceTest {
 				Map.of(),
 				createdAt
 		);
-	}
-
-	private static final class InMemoryChatMessagePersistencePort implements ChatMessagePersistencePort {
-
-		private final List<ChatMessage> store = new ArrayList<>();
-
-		@Override
-		public ChatMessage save(ChatMessage chatMessage) {
-			store.add(chatMessage);
-			return chatMessage;
-		}
-
-		@Override
-		public List<ChatMessage> findByAgitUuidOrderByCreatedAtDesc(UUID agitUuid) {
-			return store.stream()
-					.filter(message -> message.getAgitUuid().equals(agitUuid))
-					.sorted(Comparator.comparing(ChatMessage::getCreatedAt).reversed())
-					.toList();
-		}
 	}
 }

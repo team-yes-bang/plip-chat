@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class UserUuidHandshakeInterceptor implements HandshakeInterceptor {
 
-	static final String USER_UUID_ATTRIBUTE = "userUuid";
+	public static final String USER_UUID_ATTRIBUTE = "userUuid";
 
 	@Override
 	public boolean beforeHandshake(

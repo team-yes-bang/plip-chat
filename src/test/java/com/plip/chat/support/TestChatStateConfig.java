@@ -22,14 +22,24 @@ public class TestChatStateConfig {
 	public static class InMemoryChatStatePort implements ChatStatePort {
 
 		private final Map<String, Instant> store = new ConcurrentHashMap<>();
+		private final Map<UUID, Instant> lastChatAtStore = new ConcurrentHashMap<>();
 
 		@Override
 		public void markRead(UUID userUuid, UUID agitUuid, Instant readAt) {
 			store.put(key(userUuid, agitUuid), readAt);
 		}
 
+		@Override
+		public void updateLastChatAt(UUID agitUuid, Instant lastChatAt) {
+			lastChatAtStore.put(agitUuid, lastChatAt);
+		}
+
 		public Instant get(UUID userUuid, UUID agitUuid) {
 			return store.get(key(userUuid, agitUuid));
+		}
+
+		public Instant getLastChatAt(UUID agitUuid) {
+			return lastChatAtStore.get(agitUuid);
 		}
 
 		private static String key(UUID userUuid, UUID agitUuid) {

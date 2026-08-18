@@ -16,6 +16,8 @@ public class RedisChatStateAdapter implements ChatStatePort {
 
 	static final String READ_STATE_KEY_PREFIX = "user:read_state:";
 	static final String CHAT_FIELD_SUFFIX = ":chat";
+	static final String WRITE_STATE_KEY_PREFIX = "agit:write_state:";
+	static final String LAST_CHAT_AT_FIELD = "last_chat_at";
 
 	private final StringRedisTemplate redisTemplate;
 
@@ -25,6 +27,15 @@ public class RedisChatStateAdapter implements ChatStatePort {
 				READ_STATE_KEY_PREFIX + userUuid,
 				agitUuid + CHAT_FIELD_SUFFIX,
 				readAt.toString()
+		);
+	}
+
+	@Override
+	public void updateLastChatAt(UUID agitUuid, Instant lastChatAt) {
+		redisTemplate.opsForHash().put(
+				WRITE_STATE_KEY_PREFIX + agitUuid,
+				LAST_CHAT_AT_FIELD,
+				lastChatAt.toString()
 		);
 	}
 }

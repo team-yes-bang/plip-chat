@@ -42,4 +42,19 @@ class RedisChatStateAdapterTest {
 				readAt.toString()
 		);
 	}
+
+	@Test
+	void updateLastChatAt_hsetsWriteState() {
+		given(redisTemplate.opsForHash()).willReturn(hashOperations);
+		UUID agitUuid = UUID.randomUUID();
+		Instant lastChatAt = Instant.parse("2026-08-18T04:00:00Z");
+
+		redisChatStateAdapter.updateLastChatAt(agitUuid, lastChatAt);
+
+		verify(hashOperations).put(
+				RedisChatStateAdapter.WRITE_STATE_KEY_PREFIX + agitUuid,
+				RedisChatStateAdapter.LAST_CHAT_AT_FIELD,
+				lastChatAt.toString()
+		);
+	}
 }

@@ -1,3 +1,4 @@
+# Chat uses MongoDB collections (no RDB tables).
 # DDL for this microservice.
 # Append and keep up to date whenever tables are added or changed.
 # Example:

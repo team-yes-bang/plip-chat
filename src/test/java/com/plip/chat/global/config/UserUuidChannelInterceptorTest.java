@@ -20,18 +20,35 @@ class UserUuidChannelInterceptorTest {
 	private final UserUuidChannelInterceptor interceptor = new UserUuidChannelInterceptor();
 
 	@Test
-	void connect_storesUserUuidFromHeader() {
+	void connect_storesUserUuidFromHandshakeSession() {
 		UUID userUuid = UUID.randomUUID();
 		StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
 		accessor.setLeaveMutable(true);
-		accessor.setNativeHeader(ChatController.USER_UUID_HEADER, userUuid.toString());
 		Map<String, Object> attributes = new HashMap<>();
+		attributes.put(UserUuidHandshakeInterceptor.USER_UUID_ATTRIBUTE, userUuid.toString());
 		accessor.setSessionAttributes(attributes);
 		Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
 
 		interceptor.preSend(message, null);
 
 		assertThat(attributes.get(UserUuidHandshakeInterceptor.USER_UUID_ATTRIBUTE)).isEqualTo(userUuid);
+	}
+
+	@Test
+	void connect_ignoresClientStompHeaderWhenSessionHasUserUuid() {
+		UUID sessionUuid = UUID.randomUUID();
+		UUID spoofedUuid = UUID.randomUUID();
+		StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+		accessor.setLeaveMutable(true);
+		accessor.setNativeHeader(ChatController.USER_UUID_HEADER, spoofedUuid.toString());
+		Map<String, Object> attributes = new HashMap<>();
+		attributes.put(UserUuidHandshakeInterceptor.USER_UUID_ATTRIBUTE, sessionUuid.toString());
+		accessor.setSessionAttributes(attributes);
+		Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+		interceptor.preSend(message, null);
+
+		assertThat(attributes.get(UserUuidHandshakeInterceptor.USER_UUID_ATTRIBUTE)).isEqualTo(sessionUuid);
 	}
 
 	@Test
@@ -43,6 +60,6 @@ class UserUuidChannelInterceptorTest {
 
 		assertThatThrownBy(() -> interceptor.preSend(message, null))
 				.isInstanceOf(MessagingException.class)
-				.hasMessageContaining("X-User-UUID");
+				.hasMessageContaining("Gateway handshake userUuid");
 	}
 }

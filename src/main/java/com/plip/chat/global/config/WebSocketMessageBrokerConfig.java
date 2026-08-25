@@ -1,5 +1,7 @@
 package com.plip.chat.global.config;
 
+import com.plip.chat.application.port.out.ChatWsTicketPort;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -11,7 +13,10 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @Configuration
 @Profile("!test")
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketMessageBrokerConfig implements WebSocketMessageBrokerConfigurer {
+
+	private final ChatWsTicketPort chatWsTicketPort;
 
 	@Override
 	public void configureMessageBroker(MessageBrokerRegistry registry) {
@@ -21,11 +26,12 @@ public class WebSocketMessageBrokerConfig implements WebSocketMessageBrokerConfi
 
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
+		UserUuidHandshakeInterceptor handshakeInterceptor = new UserUuidHandshakeInterceptor(chatWsTicketPort);
 		registry.addEndpoint("/ws/chat")
-				.addInterceptors(new UserUuidHandshakeInterceptor())
+				.addInterceptors(handshakeInterceptor)
 				.setAllowedOriginPatterns("*");
 		registry.addEndpoint("/ws/chat")
-				.addInterceptors(new UserUuidHandshakeInterceptor())
+				.addInterceptors(handshakeInterceptor)
 				.setAllowedOriginPatterns("*")
 				.withSockJS();
 	}

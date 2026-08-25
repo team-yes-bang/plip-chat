@@ -33,12 +33,6 @@ paths:
             schema:
               $ref: "#/components/schemas/MarkChatReadRequest"
       responses:
-        "400":
-          description: Bad Request
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: Forbidden
           content:
@@ -47,6 +41,12 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Bad Request
           content:
             '*/*':
               schema:
@@ -90,12 +90,6 @@ paths:
           format: int32
           default: 20
       responses:
-        "400":
-          description: Bad Request
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: Forbidden
           content:
@@ -104,6 +98,12 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Bad Request
           content:
             '*/*':
               schema:
@@ -123,12 +123,6 @@ paths:
       summary: 기동 확인
       operationId: test
       responses:
-        "400":
-          description: Bad Request
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: Forbidden
           content:
@@ -137,6 +131,12 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Bad Request
           content:
             '*/*':
               schema:

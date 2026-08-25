@@ -7,12 +7,15 @@ import com.plip.chat.application.port.in.dto.ChatHistoryResult;
 import com.plip.chat.application.port.out.AgitReferenceQueryPort;
 import com.plip.chat.application.port.out.ChatMessagePersistencePort;
 import com.plip.chat.application.port.out.ChatStatePort;
+import com.plip.chat.application.port.out.MemberReadEventPort;
+import com.plip.chat.domain.event.MemberReadUpdated;
 import com.plip.chat.domain.model.ChatMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -25,6 +28,7 @@ public class ChatQueryService implements GetChatHistoryUseCase, UpdateReadStateU
 	private final AgitReferenceQueryPort agitReferenceQueryPort;
 	private final ChatMessagePersistencePort chatMessagePersistencePort;
 	private final ChatStatePort chatStatePort;
+	private final MemberReadEventPort memberReadEventPort;
 
 	@Override
 	public ChatHistoryResult getHistory(
@@ -60,10 +64,18 @@ public class ChatQueryService implements GetChatHistoryUseCase, UpdateReadStateU
 	}
 
 	@Override
-	public void markRead(UUID agitUuid, UUID userUuid) {
+	public void markRead(UUID agitUuid, UUID userUuid, Instant readAt) {
 		requireIds(agitUuid, userUuid);
 		requireActiveMember(agitUuid, userUuid);
-		chatStatePort.markRead(userUuid, agitUuid, Instant.now());
+
+		Instant requested = readAt != null ? readAt : Instant.now();
+		Optional<Instant> existing = chatStatePort.getReadAt(userUuid, agitUuid);
+		if (existing.isPresent() && !requested.isAfter(existing.get())) {
+			return;
+		}
+
+		chatStatePort.markRead(userUuid, agitUuid, requested);
+		memberReadEventPort.publish(new MemberReadUpdated(agitUuid, userUuid, requested));
 	}
 
 	private void requireActiveMember(UUID agitUuid, UUID userUuid) {

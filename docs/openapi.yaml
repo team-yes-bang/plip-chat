@@ -1,21 +1,238 @@
 openapi: 3.1.0
 info:
-  title: OpenAPI definition
-  version: v0
+  title: Chat Service API
+  description: plip-chat REST API
+  version: v1.0.0
 servers:
 - url: http://localhost
   description: Generated server url
+tags:
+- name: Health
+  description: 기동 확인
+- name: Chat
+  description: 채팅 내역·읽음 API
 paths:
+  /api/v1/agits/{agitUuid}/read:
+    post:
+      tags:
+      - Chat
+      summary: 채팅 읽음 처리
+      description: "ACTIVE 멤버의 읽음 시각을 Redis에 저장합니다. readAt이 없으면 서버 시각을 사용하며, 기존 readAt보\
+        다 과거 값은 무시됩니다. 액터는 Gateway가 주입한 X-User-UUID에서 식별합니다."
+      operationId: markRead
+      parameters:
+      - name: agitUuid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkChatReadRequest"
+      responses:
+        "401":
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "204":
+          description: No Content
+      security:
+      - bearerAuth: []
+  /api/v1/agits/{agitUuid}/messages:
+    get:
+      tags:
+      - Chat
+      summary: 채팅 내역 조회
+      description: ACTIVE 멤버만 조회할 수 있습니다. cursorCreatedAt+cursorId로 이전 페이지를 요청합니다.
+        액터는 Gateway가 주입한 X-User-UUID에서 식별합니다.
+      operationId: getMessages
+      parameters:
+      - name: agitUuid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: cursorCreatedAt
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: cursorId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "401":
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ChatHistoryResponse"
+      security:
+      - bearerAuth: []
   /api/test:
     get:
       tags:
-      - test-controller
+      - Health
+      summary: 기동 확인
       operationId: test
       responses:
+        "401":
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "200":
           description: OK
           content:
             '*/*':
               schema:
                 type: string
-components: {}
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      description: 에러 응답
+      properties:
+        code:
+          type: string
+          description: 에러 코드
+          example: MEMBER_NOT_ACTIVE
+        message:
+          type: string
+          description: 에러 메시지
+          example: ACTIVE 멤버만 채팅을 사용할 수 있습니다.
+    MarkChatReadRequest:
+      type: object
+      description: 채팅 읽음 처리 요청
+      properties:
+        readAt:
+          type: string
+          format: date-time
+          description: 읽음 시각. 없으면 서버 시각(Instant.now()) 사용
+          example: 2026-08-25T01:23:00Z
+    ChatCursorResponse:
+      type: object
+      description: 다음 페이지 커서
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: 마지막 메시지의 createdAt
+        id:
+          type: string
+          format: uuid
+          description: 마지막 메시지의 id
+    ChatHistoryResponse:
+      type: object
+      description: 채팅 내역 응답
+      properties:
+        messages:
+          type: array
+          description: 메시지 목록 (createdAt 내림차순)
+          items:
+            $ref: "#/components/schemas/ChatMessageResponse"
+        nextCursor:
+          $ref: "#/components/schemas/ChatCursorResponse"
+          description: 다음 페이지 커서. 더 없으면 null
+        hasNext:
+          type: boolean
+          description: 다음 페이지 존재 여부
+    ChatMessageResponse:
+      type: object
+      description: 채팅 메시지
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 메시지 ID (UUIDv7)
+          example: 018f3f6e-8e2a-7b3c-9d4e-5f6a7b8c9d0e
+        agitUuid:
+          type: string
+          format: uuid
+          description: 아지트 UUID
+        senderUuid:
+          type: string
+          format: uuid
+          description: 보낸 사람 UUID. SYSTEM 메시지는 null
+        type:
+          type: string
+          description: 메시지 유형
+          example: TALK
+        content:
+          type: string
+          description: 본문
+        payload:
+          type: object
+          additionalProperties: {}
+          description: 시스템 메시지 부가 정보
+        createdAt:
+          type: string
+          format: date-time
+          description: 생성 시각
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: "Gateway JWT 인증. 클라이언트는 Bearer 토큰을 전달하고, Gateway가 검증 후 downstream에\
+        \ X-User-UUID를 주입합니다."
+      scheme: bearer
+      bearerFormat: JWT

@@ -39,6 +39,31 @@ class ChatMessageTest {
 	}
 
 	@Test
+	void talk_trimsContent() {
+		UUID agitUuid = UUID.randomUUID();
+		UUID senderUuid = UUID.randomUUID();
+
+		ChatMessage message = ChatMessage.talk(agitUuid, senderUuid, "  hello  ");
+
+		assertThat(message.getContent()).isEqualTo("hello");
+	}
+
+	@Test
+	void talk_rejectsBlankContent() {
+		assertThatThrownBy(() -> ChatMessage.talk(UUID.randomUUID(), UUID.randomUUID(), "   "))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("content는 필수입니다.");
+	}
+
+	@Test
+	void talk_rejectsContentLongerThanMax() {
+		String tooLong = "a".repeat(ChatMessage.MAX_TALK_CONTENT_LENGTH + 1);
+		assertThatThrownBy(() -> ChatMessage.talk(UUID.randomUUID(), UUID.randomUUID(), tooLong))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("content는 2000자 이하여야 합니다.");
+	}
+
+	@Test
 	void talk_requiresSenderUuid() {
 		assertThatThrownBy(() -> ChatMessage.talk(UUID.randomUUID(), null, "hello"))
 				.isInstanceOf(IllegalArgumentException.class)

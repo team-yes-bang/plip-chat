@@ -1,6 +1,6 @@
 server:
   # 팀 할당 포트로 기본값 변경. 충돌 시 SERVER_PORT env로 오버라이드 (YAML보다 우선)
-  port: ${SERVER_PORT:8085}
+  port: ${SERVER_PORT:8082}
 
 eureka:
   instance:

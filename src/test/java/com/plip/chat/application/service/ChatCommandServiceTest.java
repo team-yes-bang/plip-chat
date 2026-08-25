@@ -57,6 +57,25 @@ class ChatCommandServiceTest {
 	}
 
 	@Test
+	void sendTalk_rejectsBlankContent() {
+		agitStore.save(AgitRoomReference.create(agitUuid, "아지트", "", 5, null, userUuid, "호스트"));
+
+		assertThatThrownBy(() -> chatCommandService.sendTalk(agitUuid, userUuid, "   "))
+				.isInstanceOf(IllegalArgumentException.class);
+		assertThat(messageStore.findByAgitUuidOrderByCreatedAtDesc(agitUuid)).isEmpty();
+		assertThat(chatBroadcastPort.getPublished()).isEmpty();
+	}
+
+	@Test
+	void sendTalk_trimsContent() {
+		agitStore.save(AgitRoomReference.create(agitUuid, "아지트", "", 5, null, userUuid, "호스트"));
+
+		ChatMessage saved = chatCommandService.sendTalk(agitUuid, userUuid, "  hi  ");
+
+		assertThat(saved.getContent()).isEqualTo("hi");
+	}
+
+	@Test
 	void sendTalk_rejectsNonActiveMember() {
 		assertThatThrownBy(() -> chatCommandService.sendTalk(agitUuid, userUuid, "안녕"))
 				.isInstanceOf(ChatAccessDeniedException.class);

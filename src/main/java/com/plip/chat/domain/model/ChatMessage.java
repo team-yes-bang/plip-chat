@@ -14,6 +14,7 @@ import java.util.UUID;
 public class ChatMessage {
 
 	public static final String SYSTEM_SENDER = "SYSTEM";
+	public static final int MAX_TALK_CONTENT_LENGTH = 2000;
 
 	private UUID id;
 	private UUID agitUuid;
@@ -27,7 +28,7 @@ public class ChatMessage {
 		if (senderUuid == null) {
 			throw new IllegalArgumentException("senderUuid는 필수입니다.");
 		}
-		return create(agitUuid, senderUuid, MessageType.TALK, content, Map.of());
+		return create(agitUuid, senderUuid, MessageType.TALK, normalizeTalkContent(content), Map.of());
 	}
 
 	public static ChatMessage system(UUID agitUuid, String content, Map<String, Object> payload) {
@@ -97,6 +98,17 @@ public class ChatMessage {
 			throw new IllegalArgumentException("content는 필수입니다.");
 		}
 		return content;
+	}
+
+	static String normalizeTalkContent(String content) {
+		if (content == null || content.isBlank()) {
+			throw new IllegalArgumentException("content는 필수입니다.");
+		}
+		String trimmed = content.trim();
+		if (trimmed.length() > MAX_TALK_CONTENT_LENGTH) {
+			throw new IllegalArgumentException("content는 2000자 이하여야 합니다.");
+		}
+		return trimmed;
 	}
 
 	private static Map<String, Object> copyPayload(Map<String, Object> payload) {

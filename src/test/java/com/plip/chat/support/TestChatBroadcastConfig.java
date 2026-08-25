@@ -30,5 +30,9 @@ public class TestChatBroadcastConfig {
 		public List<ChatMessage> getPublished() {
 			return List.copyOf(published);
 		}
+
+		public void clear() {
+			published.clear();
+		}
 	}
 }

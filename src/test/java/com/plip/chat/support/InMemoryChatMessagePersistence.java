@@ -19,6 +19,10 @@ public class InMemoryChatMessagePersistence implements ChatMessagePersistencePor
 		return chatMessage;
 	}
 
+	public void clear() {
+		store.clear();
+	}
+
 	@Override
 	public List<ChatMessage> findByAgitUuidOrderByCreatedAtDesc(UUID agitUuid) {
 		return store.stream()

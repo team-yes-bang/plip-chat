@@ -4,12 +4,12 @@ public final class SystemMessageEvents {
 
 	public static final String MEMBER_JOINED = "agit.member-joined";
 	public static final String MEMBER_BANNED = "agit.member-banned";
+	public static final String MEMBER_LEFT = "agit.member-left";
 	public static final String TOPIC_BOUND = "topic.bound";
 	public static final String TOPIC_STARTED = "topic.started";
 
-	// TODO: agit.member-left — 자진 퇴장 시스템 메시지
-	// TODO: agit.deleted — 아지트 삭제 시스템 메시지
-	// TODO: topic.unbound — 토픽 해제 시스템 메시지
+	// agit.deleted — SYSTEM 미생성: 삭제 시 read model DELETED → 채팅 REST/WS 403, 수신자 없음
+	// topic.unbound — SYSTEM 미생성: bound/started와 달리 채팅 UX상 불필요
 	// TODO: video.uploaded — 이벤트 스펙 확정 후 시스템 메시지
 
 	private SystemMessageEvents() {

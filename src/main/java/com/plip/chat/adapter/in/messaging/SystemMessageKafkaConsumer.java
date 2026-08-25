@@ -28,11 +28,11 @@ public class SystemMessageKafkaConsumer {
 			topics = {
 					AgitEventTopics.MEMBER_JOINED,
 					AgitEventTopics.MEMBER_BANNED,
+					AgitEventTopics.MEMBER_LEFT,
 					TopicEventTopics.BOUND,
 					TopicEventTopics.STARTED
-					// TODO: AgitEventTopics.MEMBER_LEFT — 자진 퇴장 시스템 메시지
-					// TODO: AgitEventTopics.DELETED — 아지트 삭제 시스템 메시지
-					// TODO: TopicEventTopics.UNBOUND — topic.unbound (상수·핸들러 추가 후)
+					// agit.deleted — SYSTEM 미구독 (삭제 후 채팅 접근 불가)
+					// topic.unbound — SYSTEM 미구독 (채팅 UX 불필요)
 					// TODO: video.uploaded — 이벤트 스펙 확정 후
 			},
 			groupId = CONSUMER_GROUP
@@ -60,7 +60,10 @@ public class SystemMessageKafkaConsumer {
 						agitUuid,
 						text(node, "topicId")
 				);
-				// TODO: MEMBER_LEFT / DELETED / topic.unbound / video.uploaded 분기
+				case AgitEventTopics.MEMBER_LEFT -> handleSystemMessageUseCase.onMemberLeft(
+						agitUuid,
+						requiredUuid(node, "userUuid")
+				);
 				default -> log.warn("시스템 메시지 skip: 알 수 없는 토픽 {}", topic);
 			}
 		} catch (IllegalArgumentException e) {

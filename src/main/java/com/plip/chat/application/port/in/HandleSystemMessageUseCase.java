@@ -12,8 +12,5 @@ public interface HandleSystemMessageUseCase {
 
 	void onTopicStarted(UUID agitUuid, String topicId);
 
-	// TODO: onMemberLeft(agitUuid, userUuid, nickname) — agit.member-left
-	// TODO: onAgitDeleted(agitUuid) — agit.deleted
-	// TODO: onTopicUnbound(agitUuid, topicId) — topic.unbound
-	// TODO: onVideoUploaded(...) — video.uploaded (스펙 확정 후)
+	void onMemberLeft(UUID agitUuid, UUID userUuid);
 }

@@ -2,6 +2,7 @@ package com.plip.chat.application.service;
 
 import com.plip.chat.application.port.in.HandleSystemMessageUseCase;
 import com.plip.chat.application.port.in.SystemMessageEvents;
+import com.plip.chat.application.port.out.AgitReferenceQueryPort;
 import com.plip.chat.application.port.out.ChatBroadcastPort;
 import com.plip.chat.application.port.out.ChatMessagePersistencePort;
 import com.plip.chat.domain.model.ChatMessage;
@@ -18,6 +19,7 @@ public class SystemMessageService implements HandleSystemMessageUseCase {
 
 	private final ChatMessagePersistencePort chatMessagePersistencePort;
 	private final ChatBroadcastPort chatBroadcastPort;
+	private final AgitReferenceQueryPort agitReferenceQueryPort;
 
 	@Override
 	public void onMemberJoined(UUID agitUuid, UUID userUuid, String nickname) {
@@ -61,6 +63,26 @@ public class SystemMessageService implements HandleSystemMessageUseCase {
 				"토픽이 시작되었습니다.",
 				payload(SystemMessageEvents.TOPIC_STARTED, null, null, requireTopicId(topicId))
 		);
+	}
+
+	@Override
+	public void onMemberLeft(UUID agitUuid, UUID userUuid) {
+		requireAgitUuid(agitUuid);
+		requireUserUuid(userUuid);
+		String displayName = requireNickname(resolveMemberNickname(agitUuid, userUuid));
+		saveAndBroadcast(
+				agitUuid,
+				displayName + "님이 퇴장했습니다.",
+				payload(SystemMessageEvents.MEMBER_LEFT, userUuid, displayName, null)
+		);
+	}
+
+	private String resolveMemberNickname(UUID agitUuid, UUID userUuid) {
+		return agitReferenceQueryPort.findByAgitUuid(agitUuid)
+				.flatMap(room -> room.findMember(userUuid))
+				.map(member -> member.getNickname())
+				.filter(nickname -> nickname != null && !nickname.isBlank())
+				.orElse(null);
 	}
 
 	private void saveAndBroadcast(UUID agitUuid, String content, Map<String, Object> payload) {

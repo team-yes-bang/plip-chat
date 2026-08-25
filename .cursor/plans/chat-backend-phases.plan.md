@@ -13,7 +13,7 @@
 | 2 Command | 읽음 **쓰기** (MarkChatRead) ✅ |
 | 2 Query | unread **조회** (배지용) — **보류** |
 | 3 | 발신자 receipt (버블 unread) — **보류** |
-| **4** | **추가 SYSTEM 메시지** (Kafka → 채팅방) — **진행 중** |
+| **4** | **추가 SYSTEM 메시지** (Kafka → 채팅방) — **#24 PR** |
 | 5 | Gateway WS ticket FE·BE ✅ |
 | 6 | 운영·인프라·부가 API |
 
@@ -28,14 +28,13 @@
 - Gateway BE: WS ticket (#20), Docker·경로 계약 (#22)
 - FE Phase 1: REST·STOMP (#118)
 - **Phase 5: Gateway WS ticket FE (#132, PR #133)** — `issueChatWsTicketAction`, `buildChatWsGatewayUrl`, `beforeConnect` 재발급, `CHAT_WS_URL` 제거
+- **Phase 4 (#24, PR #25):** `agit.member-left` SYSTEM 1종 추가 (#8 대비 유일 신규)
 
 **다음 작업 (우선순위)**
 
 1. **Phase 2 Query** — 보류 (`unreadMessageCount`)
 2. **Phase 3** — 보류 (`unreadMemberCount`)
 3. **Phase 6** — 필요 시
-
-Phase 4 (#24) — member-left SYSTEM 1종 추가.
 
 ### unread 두 가지
 
@@ -109,18 +108,32 @@ unreadMessageCount =
 
 ---
 
-## Phase 4 — 시스템 메시지 ✅ (#24)
+## Phase 4 — 시스템 메시지 (#24, PR #25)
 
-**브랜치:** `feature/24-system-message-events` → PR
+**브랜치:** `feature/24-system-message-events` → [PR #25](https://github.com/team-yes-bang/plip-chat/pull/25)
 
-| 이벤트 | 본문 | 상태 |
+### #8 기존 (4종)
+
+| 이벤트 | 본문 |
+|--------|------|
+| `agit.member-joined` | `{nickname}님이 입장했습니다.` |
+| `agit.member-banned` | `{nickname}님이 내보내졌습니다.` |
+| `topic.bound` | `토픽이 연결되었습니다.` |
+| `topic.started` | `토픽이 시작되었습니다.` |
+
+### #24 추가 (1종)
+
+| 이벤트 | 본문 | 구현 |
 |--------|------|------|
-| `agit.member-left` | `{nickname}님이 퇴장했습니다.` | ✅ **#24 유일 추가** |
-| `agit.deleted` | — | **제외** (삭제 후 채팅 403) |
-| `topic.unbound` | — | **제외** (채팅 UX 불필요) |
-| `video.uploaded` | 스펙 확정 후 | 보류 (#15) |
+| `agit.member-left` | `{nickname}님이 퇴장했습니다.` | ✅ nickname은 읽기 모델 조회 |
 
-**#8 기존 4종:** member-joined, member-banned, topic.bound, topic.started
+### SYSTEM 미생성 (의도적 제외)
+
+| 이벤트 | 사유 |
+|--------|------|
+| `agit.deleted` | 삭제 후 read model DELETED → 채팅 REST/WS 403 |
+| `topic.unbound` | bound/started와 달리 채팅 UX상 불필요 |
+| `video.uploaded` | 스펙 확정 후 (#15) |
 
 ---
 
@@ -190,8 +203,8 @@ flowchart LR
 | plip-chat #20, #22 | 5 BE | CLOSED |
 | plip-user-app #118 | 0–1 FE | CLOSED |
 | plip-user-app #132 | 5 FE | CLOSED |
-| plip-chat #15 | 4 SYSTEM (모) | OPEN |
-| plip-chat #24 | 4 SYSTEM | **PR** |
+| plip-chat #15 | 4 SYSTEM (video 등) | OPEN |
+| plip-chat #24 | 4 member-left | **PR #25** |
 | (신규) | 2 Query BE | 미생성 |
 | (신규) | 2 Query FE 배지 | 미생성 |
 | (신규) | 3 receipt | 미생성 |

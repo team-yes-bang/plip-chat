@@ -1,6 +1,5 @@
 package com.plip.chat.global.config;
 
-import com.plip.chat.adapter.in.web.ChatController;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessagingException;
@@ -20,11 +19,10 @@ public class UserUuidChannelInterceptor implements ChannelInterceptor {
 		if (accessor == null || !StompCommand.CONNECT.equals(accessor.getCommand())) {
 			return message;
 		}
-		String header = accessor.getFirstNativeHeader(ChatController.USER_UUID_HEADER);
 		Map<String, Object> attributes = accessor.getSessionAttributes();
-		String raw = header != null && !header.isBlank()
-				? header.trim()
-				: attributes == null ? null : stringValue(attributes.get(UserUuidHandshakeInterceptor.USER_UUID_ATTRIBUTE));
+		String raw = attributes == null
+				? null
+				: stringValue(attributes.get(UserUuidHandshakeInterceptor.USER_UUID_ATTRIBUTE));
 		UUID userUuid = parseUserUuid(raw);
 		if (attributes != null) {
 			attributes.put(UserUuidHandshakeInterceptor.USER_UUID_ATTRIBUTE, userUuid);
@@ -38,7 +36,7 @@ public class UserUuidChannelInterceptor implements ChannelInterceptor {
 
 	private static UUID parseUserUuid(String raw) {
 		if (raw == null || raw.isBlank()) {
-			throw new MessagingException("X-User-UUID is required");
+			throw new MessagingException("Gateway handshake userUuid is required");
 		}
 		try {
 			return UUID.fromString(raw.trim());

@@ -41,6 +41,18 @@ class ChatWebSocketControllerTest {
 	}
 
 	@Test
+	void send_passesRawContentToUseCase() {
+		UUID agitUuid = UUID.randomUUID();
+		UUID userUuid = UUID.randomUUID();
+		SendChatMessageRequest request = new SendChatMessageRequest();
+		request.setContent("  hi  ");
+
+		chatWebSocketController.send(agitUuid, request, accessorWithUser(userUuid));
+
+		verify(sendMessageUseCase).sendTalk(agitUuid, userUuid, "  hi  ");
+	}
+
+	@Test
 	void send_rejectsMissingUserUuid() {
 		UUID agitUuid = UUID.randomUUID();
 		SendChatMessageRequest request = new SendChatMessageRequest();

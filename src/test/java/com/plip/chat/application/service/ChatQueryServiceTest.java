@@ -2,12 +2,14 @@ package com.plip.chat.application.service;
 
 import com.plip.chat.application.exception.ChatAccessDeniedException;
 import com.plip.chat.application.port.in.dto.ChatHistoryResult;
+import com.plip.chat.domain.event.MemberReadUpdated;
 import com.plip.chat.domain.model.AgitRoomReference;
 import com.plip.chat.domain.model.ChatMessage;
 import com.plip.chat.domain.model.MessageType;
 import com.plip.chat.support.InMemoryAgitReferencePersistence;
 import com.plip.chat.support.InMemoryChatMessagePersistence;
 import com.plip.chat.support.TestChatStateConfig.InMemoryChatStatePort;
+import com.plip.chat.support.TestMemberReadEventConfig.InMemoryMemberReadEventPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +25,7 @@ class ChatQueryServiceTest {
 	private InMemoryAgitReferencePersistence agitStore;
 	private InMemoryChatMessagePersistence messageStore;
 	private InMemoryChatStatePort chatStatePort;
+	private InMemoryMemberReadEventPort memberReadEventPort;
 	private ChatQueryService chatQueryService;
 
 	private UUID agitUuid;
@@ -33,7 +36,8 @@ class ChatQueryServiceTest {
 		agitStore = new InMemoryAgitReferencePersistence();
 		messageStore = new InMemoryChatMessagePersistence();
 		chatStatePort = new InMemoryChatStatePort();
-		chatQueryService = new ChatQueryService(agitStore, messageStore, chatStatePort);
+		memberReadEventPort = new InMemoryMemberReadEventPort();
+		chatQueryService = new ChatQueryService(agitStore, messageStore, chatStatePort, memberReadEventPort);
 		agitUuid = UUID.randomUUID();
 		userUuid = UUID.randomUUID();
 	}
@@ -75,16 +79,47 @@ class ChatQueryServiceTest {
 	void markRead_storesReadStateForActiveMember() {
 		seedActiveMember();
 
-		chatQueryService.markRead(agitUuid, userUuid);
+		chatQueryService.markRead(agitUuid, userUuid, null);
 
-		assertThat(chatStatePort.get(userUuid, agitUuid)).isNotNull();
+		assertThat(chatStatePort.getReadAt(userUuid, agitUuid)).isPresent();
+		assertThat(chatStatePort.getMemberReadAt(agitUuid, userUuid)).isNotNull();
+		assertThat(memberReadEventPort.getPublished()).hasSize(1);
+	}
+
+	@Test
+	void markRead_usesProvidedReadAt() {
+		seedActiveMember();
+		Instant readAt = Instant.parse("2026-08-18T04:00:00Z");
+
+		chatQueryService.markRead(agitUuid, userUuid, readAt);
+
+		assertThat(chatStatePort.getReadAt(userUuid, agitUuid)).contains(readAt);
+		assertThat(memberReadEventPort.getPublished())
+				.containsExactly(new MemberReadUpdated(agitUuid, userUuid, readAt));
+	}
+
+	@Test
+	void markRead_isMonotonicAndIdempotent() {
+		seedActiveMember();
+		Instant first = Instant.parse("2026-08-18T04:00:00Z");
+		Instant second = Instant.parse("2026-08-18T05:00:00Z");
+		Instant older = Instant.parse("2026-08-18T03:00:00Z");
+
+		chatQueryService.markRead(agitUuid, userUuid, first);
+		chatQueryService.markRead(agitUuid, userUuid, second);
+		chatQueryService.markRead(agitUuid, userUuid, older);
+		chatQueryService.markRead(agitUuid, userUuid, second);
+
+		assertThat(chatStatePort.getReadAt(userUuid, agitUuid)).contains(second);
+		assertThat(memberReadEventPort.getPublished()).hasSize(2);
 	}
 
 	@Test
 	void markRead_rejectsNonActiveMember() {
-		assertThatThrownBy(() -> chatQueryService.markRead(agitUuid, userUuid))
+		assertThatThrownBy(() -> chatQueryService.markRead(agitUuid, userUuid, null))
 				.isInstanceOf(ChatAccessDeniedException.class);
-		assertThat(chatStatePort.get(userUuid, agitUuid)).isNull();
+		assertThat(chatStatePort.getReadAt(userUuid, agitUuid)).isEmpty();
+		assertThat(memberReadEventPort.getPublished()).isEmpty();
 	}
 
 	private void seedActiveMember() {

@@ -11,6 +11,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import java.time.Instant;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -28,7 +29,34 @@ class RedisChatStateAdapterTest {
 	private RedisChatStateAdapter redisChatStateAdapter;
 
 	@Test
-	void markRead_hsetsUserReadStateField() {
+	void getReadAt_returnsEmptyWhenMissing() {
+		given(redisTemplate.opsForHash()).willReturn(hashOperations);
+		UUID userUuid = UUID.randomUUID();
+		UUID agitUuid = UUID.randomUUID();
+		given(hashOperations.get(
+				RedisChatStateAdapter.READ_STATE_KEY_PREFIX + userUuid,
+				agitUuid + RedisChatStateAdapter.CHAT_FIELD_SUFFIX
+		)).willReturn(null);
+
+		assertThat(redisChatStateAdapter.getReadAt(userUuid, agitUuid)).isEmpty();
+	}
+
+	@Test
+	void getReadAt_parsesStoredInstant() {
+		given(redisTemplate.opsForHash()).willReturn(hashOperations);
+		UUID userUuid = UUID.randomUUID();
+		UUID agitUuid = UUID.randomUUID();
+		Instant readAt = Instant.parse("2026-08-18T04:00:00Z");
+		given(hashOperations.get(
+				RedisChatStateAdapter.READ_STATE_KEY_PREFIX + userUuid,
+				agitUuid + RedisChatStateAdapter.CHAT_FIELD_SUFFIX
+		)).willReturn(readAt.toString());
+
+		assertThat(redisChatStateAdapter.getReadAt(userUuid, agitUuid)).contains(readAt);
+	}
+
+	@Test
+	void markRead_hsetsUserReadStateAndMemberReads() {
 		given(redisTemplate.opsForHash()).willReturn(hashOperations);
 		UUID userUuid = UUID.randomUUID();
 		UUID agitUuid = UUID.randomUUID();
@@ -39,6 +67,11 @@ class RedisChatStateAdapterTest {
 		verify(hashOperations).put(
 				RedisChatStateAdapter.READ_STATE_KEY_PREFIX + userUuid,
 				agitUuid + RedisChatStateAdapter.CHAT_FIELD_SUFFIX,
+				readAt.toString()
+		);
+		verify(hashOperations).put(
+				RedisChatStateAdapter.memberReadsKey(agitUuid),
+				userUuid.toString(),
 				readAt.toString()
 		);
 	}

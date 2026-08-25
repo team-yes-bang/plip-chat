@@ -24,14 +24,16 @@ Mongo `type=SYSTEM` 적재 후 Redis `chat:agit:{agitUuid}`로 브로드캐스�
 | --- | --- |
 | `agit.member-joined` | `{nickname}님이 입장했습니다.` |
 | `agit.member-banned` | `{nickname}님이 내보내졌습니다.` |
+| `agit.member-left` | `{nickname}님이 퇴장했습니다.` (읽기 모델 nickname) |
 | `topic.bound` | `토픽이 연결되었습니다.` |
 | `topic.started` | `토픽이 시작되었습니다.` |
 
 payload 예: `eventType`, `userUuid`/`nickname` 또는 `topicId`.
 
-## 후속 (미구독)
+## 미구독 (의도적)
 
-- `agit.member-left` — 자진 퇴장 시스템 메시지
-- `agit.deleted` — 아지트 삭제 시스템 메시지
-- `topic.unbound` — 토픽 해제 시스템 메시지
-- `video.uploaded` — 이벤트 스펙 확정 후
+| Topic | 사유 |
+| --- | --- |
+| `agit.deleted` | 삭제 시 read model `DELETED` → 채팅 REST/WS 403. SYSTEM을 볼 ACTIVE 멤버 없음 |
+| `topic.unbound` | bound/started와 달리 채팅 UX상 SYSTEM 불필요 |
+| `video.uploaded` | 이벤트 스펙 확정 후 |

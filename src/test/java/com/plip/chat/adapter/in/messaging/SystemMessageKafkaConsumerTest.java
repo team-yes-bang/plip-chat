@@ -92,6 +92,22 @@ class SystemMessageKafkaConsumerTest {
 	}
 
 	@Test
+	void consume_memberLeft_delegatesToUseCase() {
+		UUID agitUuid = UUID.randomUUID();
+		UUID userUuid = UUID.randomUUID();
+		String payload = """
+				{
+				  "agitUuid": "%s",
+				  "userUuid": "%s"
+				}
+				""".formatted(agitUuid, userUuid);
+
+		consumer.consume(payload, AgitEventTopics.MEMBER_LEFT);
+
+		verify(handleSystemMessageUseCase).onMemberLeft(agitUuid, userUuid);
+	}
+
+	@Test
 	void consume_skipsWhenAgitUuidMissing() {
 		consumer.consume("{\"nickname\":\"게스트\"}", AgitEventTopics.MEMBER_JOINED);
 

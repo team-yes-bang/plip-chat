@@ -1,8 +1,13 @@
 package com.plip.chat.application.service;
 
 import com.plip.chat.application.port.in.SystemMessageEvents;
+import com.plip.chat.domain.model.AgitMemberReference;
+import com.plip.chat.domain.model.AgitMemberRole;
+import com.plip.chat.domain.model.AgitMemberStatus;
+import com.plip.chat.domain.model.AgitRoomReference;
 import com.plip.chat.domain.model.ChatMessage;
 import com.plip.chat.domain.model.MessageType;
+import com.plip.chat.support.InMemoryAgitReferencePersistence;
 import com.plip.chat.support.InMemoryChatMessagePersistence;
 import com.plip.chat.support.TestChatBroadcastConfig.InMemoryChatBroadcastPort;
 import com.plip.chat.support.TestChatStateConfig.InMemoryChatStatePort;
@@ -18,6 +23,7 @@ class SystemMessageServiceTest {
 	private InMemoryChatMessagePersistence messageStore;
 	private InMemoryChatBroadcastPort chatBroadcastPort;
 	private InMemoryChatStatePort chatStatePort;
+	private InMemoryAgitReferencePersistence agitStore;
 	private SystemMessageService systemMessageService;
 
 	private UUID agitUuid;
@@ -28,7 +34,8 @@ class SystemMessageServiceTest {
 		messageStore = new InMemoryChatMessagePersistence();
 		chatBroadcastPort = new InMemoryChatBroadcastPort();
 		chatStatePort = new InMemoryChatStatePort();
-		systemMessageService = new SystemMessageService(messageStore, chatBroadcastPort);
+		agitStore = new InMemoryAgitReferencePersistence();
+		systemMessageService = new SystemMessageService(messageStore, chatBroadcastPort, agitStore);
 		agitUuid = UUID.randomUUID();
 		userUuid = UUID.randomUUID();
 	}
@@ -79,6 +86,24 @@ class SystemMessageServiceTest {
 		ChatMessage saved = messageStore.findByAgitUuidOrderByCreatedAtDesc(agitUuid).get(0);
 		assertThat(saved.getContent()).isEqualTo("토픽이 시작되었습니다.");
 		assertThat(saved.getPayload()).containsEntry("eventType", SystemMessageEvents.TOPIC_STARTED);
+		assertThat(chatStatePort.getLastChatAt(agitUuid)).isNull();
+	}
+
+	@Test
+	void onMemberLeft_savesSystemMessageUsingReadModelNickname() {
+		agitStore.save(AgitRoomReference.empty(agitUuid).upsertMember(AgitMemberReference.of(
+				userUuid,
+				"게스트",
+				null,
+				AgitMemberRole.GUEST,
+				AgitMemberStatus.ACTIVE
+		)));
+
+		systemMessageService.onMemberLeft(agitUuid, userUuid);
+
+		ChatMessage saved = messageStore.findByAgitUuidOrderByCreatedAtDesc(agitUuid).get(0);
+		assertThat(saved.getContent()).isEqualTo("게스트님이 퇴장했습니다.");
+		assertThat(saved.getPayload()).containsEntry("eventType", SystemMessageEvents.MEMBER_LEFT);
 		assertThat(chatStatePort.getLastChatAt(agitUuid)).isNull();
 	}
 }

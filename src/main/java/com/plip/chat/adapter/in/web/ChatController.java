@@ -1,11 +1,14 @@
 package com.plip.chat.adapter.in.web;
 
 import com.plip.chat.adapter.in.web.dto.ChatHistoryResponse;
+import com.plip.chat.adapter.in.web.dto.ChatStateResponse;
 import com.plip.chat.adapter.in.web.dto.MarkChatReadRequest;
 import com.plip.chat.adapter.in.web.mapper.ChatWebMapper;
 import com.plip.chat.application.exception.UnauthorizedException;
 import com.plip.chat.application.port.in.GetChatHistoryUseCase;
+import com.plip.chat.application.port.in.GetChatStateUseCase;
 import com.plip.chat.application.port.in.UpdateReadStateUseCase;
+import com.plip.chat.application.port.in.dto.ChatStateResult;
 import com.plip.chat.global.config.SwaggerConfig;
 import com.plip.chat.global.web.RequestHeaders;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,8 +40,27 @@ public class ChatController {
 	public static final String USER_UUID_HEADER = RequestHeaders.USER_UUID_HEADER;
 
 	private final GetChatHistoryUseCase getChatHistoryUseCase;
+	private final GetChatStateUseCase getChatStateUseCase;
 	private final UpdateReadStateUseCase updateReadStateUseCase;
 	private final ChatWebMapper chatWebMapper;
+
+	@Operation(
+			summary = "채팅 상태 조회",
+			description = "ACTIVE 멤버의 readAt, lastChatAt, unreadMessageCount를 반환합니다."
+	)
+	@GetMapping("/chat-state")
+	public ChatStateResponse getChatState(
+			@PathVariable UUID agitUuid,
+			@Parameter(hidden = true) @RequestHeader(value = USER_UUID_HEADER, required = false) String userUuidHeader
+	) {
+		UUID userUuid = requireUserUuid(userUuidHeader);
+		ChatStateResult result = getChatStateUseCase.getChatState(agitUuid, userUuid);
+		return ChatStateResponse.builder()
+				.readAt(result.getReadAt())
+				.lastChatAt(result.getLastChatAt())
+				.unreadMessageCount(result.getUnreadMessageCount())
+				.build();
+	}
 
 	@Operation(
 			summary = "채팅 내역 조회",

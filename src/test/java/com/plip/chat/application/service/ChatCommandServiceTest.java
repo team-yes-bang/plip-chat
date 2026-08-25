@@ -7,6 +7,7 @@ import com.plip.chat.domain.model.MessageType;
 import com.plip.chat.support.InMemoryAgitReferencePersistence;
 import com.plip.chat.support.InMemoryChatMessagePersistence;
 import com.plip.chat.support.TestChatBroadcastConfig.InMemoryChatBroadcastPort;
+import com.plip.chat.support.TestChatReceiptConfig;
 import com.plip.chat.support.TestChatStateConfig.InMemoryChatStatePort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ class ChatCommandServiceTest {
 				agitStore,
 				messageStore,
 				chatStatePort,
+				new TestChatReceiptConfig.InMemoryChatReceiptPort(),
 				chatBroadcastPort
 		);
 		agitUuid = UUID.randomUUID();
@@ -52,8 +54,28 @@ class ChatCommandServiceTest {
 		assertThat(saved.getType()).isEqualTo(MessageType.TALK);
 		assertThat(saved.getContent()).isEqualTo("안녕");
 		assertThat(messageStore.findByAgitUuidOrderByCreatedAtDesc(agitUuid)).containsExactly(saved);
-		assertThat(chatStatePort.getLastChatAt(agitUuid)).isEqualTo(saved.getCreatedAt());
-		assertThat(chatBroadcastPort.getPublished()).containsExactly(saved);
+		assertThat(chatStatePort.getLastChatAt(agitUuid)).contains(saved.getCreatedAt());
+		assertThat(chatBroadcastPort.getPublishedMessages()).containsExactly(saved);
+	}
+
+	@Test
+	void sendTalk_initializesUnreadMemberCount() {
+		agitStore.save(AgitRoomReference.create(agitUuid, "아지트", "", 5, null, userUuid, "호스트"));
+		TestChatReceiptConfig.InMemoryChatReceiptPort chatReceiptPort = new TestChatReceiptConfig.InMemoryChatReceiptPort();
+		chatCommandService = new ChatCommandService(
+				agitStore,
+				messageStore,
+				chatStatePort,
+				chatReceiptPort,
+				chatBroadcastPort
+		);
+
+		ChatMessage saved = chatCommandService.sendTalk(agitUuid, userUuid, "안녕");
+
+		assertThat(chatReceiptPort.getUnreadMemberCount(agitUuid, saved.getId())).hasValue(0);
+		assertThat(chatBroadcastPort.getPublished()).containsExactly(
+				new InMemoryChatBroadcastPort.PublishedMessage(saved, 0)
+		);
 	}
 
 	@Test
@@ -63,7 +85,7 @@ class ChatCommandServiceTest {
 		assertThatThrownBy(() -> chatCommandService.sendTalk(agitUuid, userUuid, "   "))
 				.isInstanceOf(IllegalArgumentException.class);
 		assertThat(messageStore.findByAgitUuidOrderByCreatedAtDesc(agitUuid)).isEmpty();
-		assertThat(chatBroadcastPort.getPublished()).isEmpty();
+		assertThat(chatBroadcastPort.getPublishedMessages()).isEmpty();
 	}
 
 	@Test
@@ -80,7 +102,7 @@ class ChatCommandServiceTest {
 		assertThatThrownBy(() -> chatCommandService.sendTalk(agitUuid, userUuid, "안녕"))
 				.isInstanceOf(ChatAccessDeniedException.class);
 		assertThat(messageStore.findByAgitUuidOrderByCreatedAtDesc(agitUuid)).isEmpty();
-		assertThat(chatBroadcastPort.getPublished()).isEmpty();
-		assertThat(chatStatePort.getLastChatAt(agitUuid)).isNull();
+		assertThat(chatBroadcastPort.getPublishedMessages()).isEmpty();
+		assertThat(chatStatePort.getLastChatAt(agitUuid)).isEmpty();
 	}
 }

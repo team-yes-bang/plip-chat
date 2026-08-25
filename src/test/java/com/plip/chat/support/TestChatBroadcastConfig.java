@@ -20,19 +20,26 @@ public class TestChatBroadcastConfig {
 
 	public static class InMemoryChatBroadcastPort implements ChatBroadcastPort {
 
-		private final List<ChatMessage> published = new ArrayList<>();
+		private final List<PublishedMessage> published = new ArrayList<>();
 
 		@Override
-		public void publish(ChatMessage message) {
-			published.add(message);
+		public void publish(ChatMessage message, Integer unreadMemberCount) {
+			published.add(new PublishedMessage(message, unreadMemberCount));
 		}
 
-		public List<ChatMessage> getPublished() {
+		public List<PublishedMessage> getPublished() {
 			return List.copyOf(published);
+		}
+
+		public List<ChatMessage> getPublishedMessages() {
+			return published.stream().map(PublishedMessage::message).toList();
 		}
 
 		public void clear() {
 			published.clear();
+		}
+
+		public record PublishedMessage(ChatMessage message, Integer unreadMemberCount) {
 		}
 	}
 }

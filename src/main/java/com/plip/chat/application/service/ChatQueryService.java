@@ -6,15 +6,18 @@ import com.plip.chat.application.port.in.UpdateReadStateUseCase;
 import com.plip.chat.application.port.in.dto.ChatHistoryResult;
 import com.plip.chat.application.port.out.AgitReferenceQueryPort;
 import com.plip.chat.application.port.out.ChatMessagePersistencePort;
+import com.plip.chat.application.port.out.ChatReceiptPort;
 import com.plip.chat.application.port.out.ChatStatePort;
 import com.plip.chat.application.port.out.MemberReadEventPort;
 import com.plip.chat.domain.event.MemberReadUpdated;
 import com.plip.chat.domain.model.ChatMessage;
+import com.plip.chat.domain.model.MessageType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,6 +31,7 @@ public class ChatQueryService implements GetChatHistoryUseCase, UpdateReadStateU
 	private final AgitReferenceQueryPort agitReferenceQueryPort;
 	private final ChatMessagePersistencePort chatMessagePersistencePort;
 	private final ChatStatePort chatStatePort;
+	private final ChatReceiptPort chatReceiptPort;
 	private final MemberReadEventPort memberReadEventPort;
 
 	@Override
@@ -59,7 +63,8 @@ public class ChatQueryService implements GetChatHistoryUseCase, UpdateReadStateU
 				page,
 				hasNext ? oldest.getCreatedAt() : null,
 				hasNext ? oldest.getId() : null,
-				hasNext
+				hasNext,
+				resolveUnreadMemberCounts(agitUuid, userUuid, page)
 		);
 	}
 
@@ -74,8 +79,21 @@ public class ChatQueryService implements GetChatHistoryUseCase, UpdateReadStateU
 			return;
 		}
 
+		Instant previousReadAt = existing.orElse(null);
 		chatStatePort.markRead(userUuid, agitUuid, requested);
-		memberReadEventPort.publish(new MemberReadUpdated(agitUuid, userUuid, requested));
+		memberReadEventPort.publish(new MemberReadUpdated(agitUuid, userUuid, requested, previousReadAt));
+	}
+
+	private Map<UUID, Integer> resolveUnreadMemberCounts(UUID agitUuid, UUID userUuid, List<ChatMessage> messages) {
+		List<UUID> myTalkMessageIds = messages.stream()
+				.filter(message -> message.getType() == MessageType.TALK)
+				.filter(message -> userUuid.equals(message.getSenderUuid()))
+				.map(ChatMessage::getId)
+				.toList();
+		if (myTalkMessageIds.isEmpty()) {
+			return Map.of();
+		}
+		return chatReceiptPort.getUnreadMemberCounts(agitUuid, myTalkMessageIds);
 	}
 
 	private void requireActiveMember(UUID agitUuid, UUID userUuid) {

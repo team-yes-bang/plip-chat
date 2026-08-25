@@ -1,6 +1,7 @@
 package com.plip.chat.global.config;
 
 import com.plip.chat.adapter.out.redis.RedisChatPubSubAdapter;
+import com.plip.chat.adapter.out.redis.RedisChatReceiptPubSubAdapter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -15,11 +16,13 @@ public class RedisPubSubConfig {
 	@Bean
 	public RedisMessageListenerContainer redisMessageListenerContainer(
 			RedisConnectionFactory connectionFactory,
-			RedisChatPubSubAdapter redisChatPubSubAdapter
+			RedisChatPubSubAdapter redisChatPubSubAdapter,
+			RedisChatReceiptPubSubAdapter redisChatReceiptPubSubAdapter
 	) {
 		RedisMessageListenerContainer container = new RedisMessageListenerContainer();
 		container.setConnectionFactory(connectionFactory);
 		container.addMessageListener(redisChatPubSubAdapter, new PatternTopic("chat:agit:*"));
+		container.addMessageListener(redisChatReceiptPubSubAdapter, new PatternTopic("chat:agit:*:receipts"));
 		return container;
 	}
 }

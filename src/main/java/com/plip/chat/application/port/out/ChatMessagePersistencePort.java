@@ -13,4 +13,13 @@ public interface ChatMessagePersistencePort {
 	List<ChatMessage> findByAgitUuidOrderByCreatedAtDesc(UUID agitUuid);
 
 	List<ChatMessage> findHistory(UUID agitUuid, Instant cursorCreatedAt, UUID cursorId, int limit);
+
+	long countUnread(UUID agitUuid, UUID userUuid, Instant readAt);
+
+	List<ChatMessage> findTalkByAgitAndCreatedAtRange(
+			UUID agitUuid,
+			Instant afterExclusive,
+			Instant toInclusive,
+			UUID excludeSenderUuid
+	);
 }

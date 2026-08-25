@@ -8,6 +8,7 @@ import com.plip.chat.domain.model.ChatMessage;
 import com.plip.chat.domain.model.MessageType;
 import com.plip.chat.support.InMemoryAgitReferencePersistence;
 import com.plip.chat.support.InMemoryChatMessagePersistence;
+import com.plip.chat.support.TestChatReceiptConfig;
 import com.plip.chat.support.TestChatStateConfig.InMemoryChatStatePort;
 import com.plip.chat.support.TestMemberReadEventConfig.InMemoryMemberReadEventPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,7 +38,7 @@ class ChatQueryServiceTest {
 		messageStore = new InMemoryChatMessagePersistence();
 		chatStatePort = new InMemoryChatStatePort();
 		memberReadEventPort = new InMemoryMemberReadEventPort();
-		chatQueryService = new ChatQueryService(agitStore, messageStore, chatStatePort, memberReadEventPort);
+		chatQueryService = new ChatQueryService(agitStore, messageStore, chatStatePort, new TestChatReceiptConfig.InMemoryChatReceiptPort(), memberReadEventPort);
 		agitUuid = UUID.randomUUID();
 		userUuid = UUID.randomUUID();
 	}
@@ -82,7 +83,7 @@ class ChatQueryServiceTest {
 		chatQueryService.markRead(agitUuid, userUuid, null);
 
 		assertThat(chatStatePort.getReadAt(userUuid, agitUuid)).isPresent();
-		assertThat(chatStatePort.getMemberReadAt(agitUuid, userUuid)).isNotNull();
+		assertThat(chatStatePort.getMemberReadAt(agitUuid, userUuid)).isNotEmpty();
 		assertThat(memberReadEventPort.getPublished()).hasSize(1);
 	}
 
@@ -95,7 +96,7 @@ class ChatQueryServiceTest {
 
 		assertThat(chatStatePort.getReadAt(userUuid, agitUuid)).contains(readAt);
 		assertThat(memberReadEventPort.getPublished())
-				.containsExactly(new MemberReadUpdated(agitUuid, userUuid, readAt));
+				.containsExactly(new MemberReadUpdated(agitUuid, userUuid, readAt, null));
 	}
 
 	@Test

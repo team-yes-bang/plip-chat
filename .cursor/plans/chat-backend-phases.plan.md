@@ -11,9 +11,9 @@
 |-------|------|
 | 0–1 | 계약·E2E 기반 |
 | 2 Command | 읽음 **쓰기** (MarkChatRead) ✅ |
-| 2 Query | unread **조회** (배지용) — **보류** |
-| 3 | 발신자 receipt (버블 unread) — **보류** |
-| **4** | **추가 SYSTEM 메시지** (Kafka → 채팅방) — **진행 중** |
+| 2 Query | unread **조회** (배지용) — **#26** |
+| 3 | 발신자 receipt (버블 unread) — **#26** |
+| **4** | **추가 SYSTEM 메시지** (Kafka → 채팅방) — ✅ #24 |
 | 5 | Gateway WS ticket FE·BE ✅ |
 | 6 | 운영·인프라·부가 API |
 
@@ -27,15 +27,15 @@
 - Phase 2 Command: MarkChatRead monotonic, `member_reads`, `MemberReadUpdated` (#18)
 - Gateway BE: WS ticket (#20), Docker·경로 계약 (#22)
 - FE Phase 1: REST·STOMP (#118)
-- **Phase 5: Gateway WS ticket FE (#132, PR #133)** — `issueChatWsTicketAction`, `buildChatWsGatewayUrl`, `beforeConnect` 재발급, `CHAT_WS_URL` 제거
+- **Phase 5: Gateway WS ticket FE (#132, PR #133)**
+- **Phase 4 (#24, PR #25):** `agit.member-left` SYSTEM 1종 추가
+- **Phase 2 Query + 3 (#26):** unread 조회·receipt BE (브랜치 push, PR 보류)
 
 **다음 작업 (우선순위)**
 
-1. **Phase 2 Query** — 보류 (`unreadMessageCount`)
-2. **Phase 3** — 보류 (`unreadMemberCount`)
+1. **#26 수동 테스트** → PR
+2. **Phase 2/3 FE** — plip-user-app (별도 이슈)
 3. **Phase 6** — 필요 시
-
-Phase 4 (#24) — member-left SYSTEM 1종 추가.
 
 ### unread 두 가지
 
@@ -74,53 +74,59 @@ Phase 4 (#24) — member-left SYSTEM 1종 추가.
 
 ---
 
-## Phase 2 Query — unreadMessageCount ⬜ **보류**
+## Phase 2 Query + Phase 3 — unread·receipt (#26)
 
-**목표:** 아지트별 미읽음 TALK 개수 → 목록·메뉴 배지
+**브랜치:** `feature/26-unread-query-receipt` (push, PR 보류)
+
+### Phase 2 Query — unreadMessageCount
 
 ```text
 unreadMessageCount =
   count(TALK where createdAt > myReadAt and senderUuid != me)
 ```
 
-**plip-chat (미구현)**
+- [x] `ChatStatePort` 조회 — `getLastChatAt`, `getMemberReadAt`, `getMemberReadAtMap`
+- [x] `ChatMessagePersistencePort.countUnread(...)`
+- [x] `GET /api/v1/agits/{agitUuid}/chat-state`
+- [x] `GET /api/v1/me/agits/chat-unread` (배치, optional `agitUuids`)
 
-- [ ] `ChatStateQueryPort` — `getReadAt`, `getLastChatAt`, `getMemberReadAtMap`
-- [ ] `ChatMessagePersistencePort.countUnread(...)`
-- [ ] `GET /api/v1/agits/{agitUuid}/chat-state`
-- [ ] `GET /api/v1/me/agits/chat-unread` (배치, optional `agitUuids`)
-- [ ] (선택) `/sub/users/{userUuid}/chat-inbox` WS patch
+### Phase 3 — unreadMemberCount + receipt
 
-**plip-user-app (미구현, BE 후 FE 이슈)**
+- [x] TALK send 시 초기 `unreadMemberCount = activeMemberCount - 1`
+- [x] `ReadReceiptProjector` ← `MemberReadUpdated` (Redis `agit:{uuid}:message_receipts`)
+- [x] History REST — 내 TALK에 `unreadMemberCount` enrich
+- [x] WS `/sub/agits/{uuid}/receipts` receipt push
 
-- [ ] `chatApi.getMyAgitsChatUnread`, `agitService.listMyAgits` merge
-- [ ] `UiAgit.chatUnreadCount`, `AgitListRow` 숫자 배지
-
----
-
-## Phase 3 — unreadMemberCount + receipt ⬜ **보류**
-
-**목표:** 내가 보낸 tip 메시지 옆 "안 읽은 멤버 수"
-
-- [ ] History/WS `unreadMemberCount` enrich (tip만)
-- [ ] TALK send 시 초기 count = activeMemberCount - 1
-- [ ] `ReadReceiptProjector` ← `MemberReadUpdated`
-- [ ] WS `/sub/agits/{uuid}/receipts`
+**제외:** plip-user-app FE merge, WS `/sub/users/{userUuid}/chat-inbox`
 
 ---
 
-## Phase 4 — 시스템 메시지 ✅ (#24)
+## Phase 4 — 시스템 메시지 ✅ (#24, PR #25)
 
-**브랜치:** `feature/24-system-message-events` → PR
+**브랜치:** `feature/24-system-message-events` → [PR #25](https://github.com/team-yes-bang/plip-chat/pull/25)
 
-| 이벤트 | 본문 | 상태 |
-|--------|------|------|
-| `agit.member-left` | `{nickname}님이 퇴장했습니다.` | ✅ **#24 유일 추가** |
-| `agit.deleted` | — | **제외** (삭제 후 채팅 403) |
-| `topic.unbound` | — | **제외** (채팅 UX 불필요) |
-| `video.uploaded` | 스펙 확정 후 | 보류 (#15) |
+### #8 기존 (4종)
 
-**#8 기존 4종:** member-joined, member-banned, topic.bound, topic.started
+| 이벤트 | 본문 |
+|--------|------|
+| `agit.member-joined` | `{nickname}님이 입장했습니다.` |
+| `agit.member-banned` | `{nickname}님이 내보내졌습니다.` |
+| `topic.bound` | `토픽이 연결되었습니다.` |
+| `topic.started` | `토픽이 시작되었습니다.` |
+
+### #24 추가 (1종)
+
+| 이벤트 | 본문 |
+|--------|------|
+| `agit.member-left` | `{nickname}님이 퇴장했습니다.` |
+
+### SYSTEM 미생성
+
+| 이벤트 | 사유 |
+|--------|------|
+| `agit.deleted` | 삭제 후 채팅 403 |
+| `topic.unbound` | 채팅 UX 불필요 |
+| `video.uploaded` | 스펙 확정 후 (#15) |
 
 ---
 
@@ -178,7 +184,7 @@ flowchart LR
   P3 --> P6[Phase6_운영]
 ```
 
-**현재:** Phase 4 (#24) ✅ → **다음: Phase 2 Query 또는 Phase 3** (보류)
+**현재:** Phase 2 Query + 3 (#26) BE push → **다음: 수동 테스트·PR, FE 연동**
 
 ---
 
@@ -190,11 +196,10 @@ flowchart LR
 | plip-chat #20, #22 | 5 BE | CLOSED |
 | plip-user-app #118 | 0–1 FE | CLOSED |
 | plip-user-app #132 | 5 FE | CLOSED |
-| plip-chat #15 | 4 SYSTEM (모) | OPEN |
-| plip-chat #24 | 4 SYSTEM | **PR** |
-| (신규) | 2 Query BE | 미생성 |
-| (신규) | 2 Query FE 배지 | 미생성 |
-| (신규) | 3 receipt | 미생성 |
+| plip-chat #24 | 4 member-left | CLOSED (#25) |
+| plip-chat #26 | 2 Query + 3 receipt BE | **브랜치 push** |
+| plip-chat #15 | 4 SYSTEM (video 등) | OPEN |
+| (신규) | 2/3 FE | 미생성 |
 
 ---
 

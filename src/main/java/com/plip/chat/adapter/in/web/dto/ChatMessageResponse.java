@@ -34,6 +34,6 @@ public class ChatMessageResponse {
 	@Schema(description = "생성 시각")
 	private Instant createdAt;
 
-	@Schema(description = "발신 TALK의 미읽음 멤버 수 (내 메시지에만 포함)")
+	@Schema(description = "TALK 메시지의 미읽음 멤버 수 (방 전체 동일)")
 	private Integer unreadMemberCount;
 }

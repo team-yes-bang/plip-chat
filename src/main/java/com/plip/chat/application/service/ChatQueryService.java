@@ -6,7 +6,6 @@ import com.plip.chat.application.port.in.UpdateReadStateUseCase;
 import com.plip.chat.application.port.in.dto.ChatHistoryResult;
 import com.plip.chat.application.port.out.AgitReferenceQueryPort;
 import com.plip.chat.application.port.out.ChatMessagePersistencePort;
-import com.plip.chat.application.port.out.ChatReceiptPort;
 import com.plip.chat.application.port.out.ChatStatePort;
 import com.plip.chat.application.port.out.MemberReadEventPort;
 import com.plip.chat.domain.event.MemberReadUpdated;
@@ -31,8 +30,9 @@ public class ChatQueryService implements GetChatHistoryUseCase, UpdateReadStateU
 	private final AgitReferenceQueryPort agitReferenceQueryPort;
 	private final ChatMessagePersistencePort chatMessagePersistencePort;
 	private final ChatStatePort chatStatePort;
-	private final ChatReceiptPort chatReceiptPort;
 	private final MemberReadEventPort memberReadEventPort;
+	private final ReadReceiptProjector readReceiptProjector;
+	private final UnreadMemberCountCalculator unreadMemberCountCalculator;
 
 	@Override
 	public ChatHistoryResult getHistory(
@@ -64,7 +64,7 @@ public class ChatQueryService implements GetChatHistoryUseCase, UpdateReadStateU
 				hasNext ? oldest.getCreatedAt() : null,
 				hasNext ? oldest.getId() : null,
 				hasNext,
-				resolveUnreadMemberCounts(agitUuid, userUuid, page)
+				resolveUnreadMemberCounts(agitUuid, page)
 		);
 	}
 
@@ -74,26 +74,47 @@ public class ChatQueryService implements GetChatHistoryUseCase, UpdateReadStateU
 		requireActiveMember(agitUuid, userUuid);
 
 		Instant requested = readAt != null ? readAt : Instant.now();
-		Optional<Instant> existing = chatStatePort.getReadAt(userUuid, agitUuid);
-		if (existing.isPresent() && !requested.isAfter(existing.get())) {
-			return;
+		Optional<Instant> existingReadAt = chatStatePort.getReadAt(userUuid, agitUuid);
+		Optional<Instant> existingProjected = chatStatePort.getReceiptProjectedAt(userUuid, agitUuid);
+
+		Instant effectiveReadAt;
+		if (existingReadAt.isPresent() && !requested.isAfter(existingReadAt.get())) {
+			effectiveReadAt = existingReadAt.get();
+		} else {
+			chatStatePort.markRead(userUuid, agitUuid, requested);
+			effectiveReadAt = requested;
 		}
 
-		Instant previousReadAt = existing.orElse(null);
-		chatStatePort.markRead(userUuid, agitUuid, requested);
-		memberReadEventPort.publish(new MemberReadUpdated(agitUuid, userUuid, requested, previousReadAt));
+		Instant previousProjected = existingProjected.orElse(null);
+		if (previousProjected == null || effectiveReadAt.isAfter(previousProjected)) {
+			MemberReadUpdated event = new MemberReadUpdated(
+					agitUuid,
+					userUuid,
+					effectiveReadAt,
+					previousProjected
+			);
+			readReceiptProjector.onMemberReadUpdated(event);
+			chatStatePort.setReceiptProjectedAt(userUuid, agitUuid, effectiveReadAt);
+			memberReadEventPort.publish(event);
+		}
 	}
 
-	private Map<UUID, Integer> resolveUnreadMemberCounts(UUID agitUuid, UUID userUuid, List<ChatMessage> messages) {
-		List<UUID> myTalkMessageIds = messages.stream()
+	private Map<UUID, Integer> resolveUnreadMemberCounts(UUID agitUuid, List<ChatMessage> messages) {
+		List<ChatMessage> talkMessages = messages.stream()
 				.filter(message -> message.getType() == MessageType.TALK)
-				.filter(message -> userUuid.equals(message.getSenderUuid()))
-				.map(ChatMessage::getId)
 				.toList();
-		if (myTalkMessageIds.isEmpty()) {
+		if (talkMessages.isEmpty()) {
 			return Map.of();
 		}
-		return chatReceiptPort.getUnreadMemberCounts(agitUuid, myTalkMessageIds);
+
+		Map<UUID, Integer> resolved = new java.util.HashMap<>();
+		for (ChatMessage message : talkMessages) {
+			resolved.put(
+					message.getId(),
+					unreadMemberCountCalculator.compute(agitUuid, message)
+			);
+		}
+		return Map.copyOf(resolved);
 	}
 
 	private void requireActiveMember(UUID agitUuid, UUID userUuid) {

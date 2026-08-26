@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
 
 import java.time.Instant;
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -105,5 +107,28 @@ class ChatMessagePersistenceAdapterTest {
 
 		assertThat(messages).extracting(ChatMessage::getContent).containsExactly("최근", "이전");
 		assertThat(messages).extracting(ChatMessage::getCreatedAt).containsExactly(newerAt, olderAt);
+	}
+
+	@Test
+	void findTalkByAgitAndCreatedAtRange_usesAndOperatorForCreatedAtRange() {
+		UUID agitUuid = UUID.randomUUID();
+		UUID readerUuid = UUID.randomUUID();
+		Instant afterExclusive = Instant.parse("2026-08-26T00:47:53.131Z");
+		Instant toInclusive = Instant.parse("2026-08-26T01:06:07.989Z");
+		given(mongoTemplate.find(any(Query.class), eq(ChatMessageMongoDocument.class))).willReturn(List.of());
+
+		chatMessagePersistenceAdapter.findTalkByAgitAndCreatedAtRange(
+				agitUuid,
+				afterExclusive,
+				toInclusive,
+				readerUuid
+		);
+
+		verify(mongoTemplate).find(argThat(query -> {
+			String queryString = query.getQueryObject().toString();
+			return queryString.contains("createdAt")
+					&& queryString.contains("$gt")
+					&& queryString.contains("$lte");
+		}), eq(ChatMessageMongoDocument.class));
 	}
 }

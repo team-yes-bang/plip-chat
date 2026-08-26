@@ -79,10 +79,14 @@ public class ChatMessagePersistenceAdapter implements ChatMessagePersistencePort
 	) {
 		Criteria criteria = Criteria.where("agitUuid").is(agitUuid.toString())
 				.and("type").is(MessageType.TALK.name())
-				.and("senderUuid").ne(excludeSenderUuid.toString())
-				.and("createdAt").lte(toInclusive);
+				.and("senderUuid").ne(excludeSenderUuid.toString());
 		if (afterExclusive != null) {
-			criteria = criteria.and("createdAt").gt(afterExclusive);
+			criteria = criteria.andOperator(
+					Criteria.where("createdAt").gt(afterExclusive),
+					Criteria.where("createdAt").lte(toInclusive)
+			);
+		} else {
+			criteria = criteria.and("createdAt").lte(toInclusive);
 		}
 		Query query = new Query(criteria);
 		return mongoTemplate.find(query, ChatMessageMongoDocument.class).stream()

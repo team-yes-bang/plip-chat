@@ -387,7 +387,7 @@ components:
         unreadMemberCount:
           type: integer
           format: int32
-          description: 발신 TALK의 미읽음 멤버 수 (내 메시지에만 포함)
+          description: TALK 메시지의 미읽음 멤버 수 (방 전체 동일)
     ChatStateResponse:
       type: object
       description: 아지트 채팅 상태

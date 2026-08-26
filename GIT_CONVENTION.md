@@ -81,6 +81,7 @@ Chore: test 프로필 H2 추가
 ```
 
 - `{Type}`: `Feature` | `Fix` | `Refactor` | `Style` | `Docs` | `Chore`
+- API 변경 후 `./gradlew test`로 `docs/openapi.yaml`이 바뀌면 **함께 커밋**합니다.
 - DDL 변경 시 `docs/sql/schema.sql`도 함께 커밋합니다.
 
 ---
@@ -132,6 +133,7 @@ PR 템플릿 섹션을 모두 채웁니다.
 - [ ] 제목·Type·이슈 번호 일치
 - [ ] `Close #N` 연결
 - [ ] CI `Test` 성공
+- [ ] API 변경 시 `docs/openapi.yaml` 포함
 - [ ] DDL 변경 시 `docs/sql/schema.sql` 포함
 
 ---
@@ -143,8 +145,6 @@ PR 템플릿 섹션을 모두 채웁니다.
 - 트리거: `develop` / `main`에 대한 `pull_request`, `push`
 - 실행: JDK 17 + `./gradlew test --no-daemon` (레포 루트)
 - push 전 로컬에서도 `./gradlew test`로 확인합니다.
-
-**API 명세:** [Gateway Swagger UI](http://192.168.10.144:8000/swagger-ui/index.html)에서 서비스별 OpenAPI를 통합 조회합니다. repo `docs/openapi.yaml` 커밋은 필수가 아닙니다.
 
 ---
 

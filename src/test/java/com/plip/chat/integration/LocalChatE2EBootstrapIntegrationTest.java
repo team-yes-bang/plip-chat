@@ -69,7 +69,7 @@ class LocalChatE2EBootstrapIntegrationTest {
 		assertThat(history).extracting(ChatMessage::getContent)
 				.containsExactlyInAnyOrder("호스트 메시지", "게스트 메시지");
 
-		List<ChatMessage> published = chatBroadcastPort.getPublished();
+		List<ChatMessage> published = chatBroadcastPort.getPublishedMessages();
 		assertThat(published).hasSize(2);
 		assertThat(published.get(0).getContent()).isEqualTo("호스트 메시지");
 		assertThat(published.get(1).getContent()).isEqualTo("게스트 메시지");

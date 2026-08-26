@@ -4,5 +4,9 @@ import com.plip.chat.domain.model.ChatMessage;
 
 public interface ChatBroadcastPort {
 
-	void publish(ChatMessage message);
+	default void publish(ChatMessage message) {
+		publish(message, null);
+	}
+
+	void publish(ChatMessage message, Integer unreadMemberCount);
 }

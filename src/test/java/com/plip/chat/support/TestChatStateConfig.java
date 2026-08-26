@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,6 +33,28 @@ public class TestChatStateConfig {
 		}
 
 		@Override
+		public Optional<Instant> getLastChatAt(UUID agitUuid) {
+			return Optional.ofNullable(lastChatAtStore.get(agitUuid));
+		}
+
+		@Override
+		public Optional<Instant> getMemberReadAt(UUID agitUuid, UUID userUuid) {
+			return Optional.ofNullable(memberReadsStore.get(memberReadKey(agitUuid, userUuid)));
+		}
+
+		@Override
+		public Map<UUID, Instant> getMemberReadAtMap(UUID agitUuid) {
+			Map<UUID, Instant> result = new HashMap<>();
+			String prefix = agitUuid + ":";
+			for (Map.Entry<String, Instant> entry : memberReadsStore.entrySet()) {
+				if (entry.getKey().startsWith(prefix)) {
+					result.put(UUID.fromString(entry.getKey().substring(prefix.length())), entry.getValue());
+				}
+			}
+			return Map.copyOf(result);
+		}
+
+		@Override
 		public void markRead(UUID userUuid, UUID agitUuid, Instant readAt) {
 			readStateStore.put(readStateKey(userUuid, agitUuid), readAt);
 			memberReadsStore.put(memberReadKey(agitUuid, userUuid), readAt);
@@ -40,14 +63,6 @@ public class TestChatStateConfig {
 		@Override
 		public void updateLastChatAt(UUID agitUuid, Instant lastChatAt) {
 			lastChatAtStore.put(agitUuid, lastChatAt);
-		}
-
-		public Instant getLastChatAt(UUID agitUuid) {
-			return lastChatAtStore.get(agitUuid);
-		}
-
-		public Instant getMemberReadAt(UUID agitUuid, UUID userUuid) {
-			return memberReadsStore.get(memberReadKey(agitUuid, userUuid));
 		}
 
 		private static String readStateKey(UUID userUuid, UUID agitUuid) {

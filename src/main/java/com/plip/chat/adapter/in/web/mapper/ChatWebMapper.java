@@ -19,13 +19,22 @@ public class ChatWebMapper {
 					.build();
 		}
 		return ChatHistoryResponse.builder()
-				.messages(result.getMessages().stream().map(this::toMessageResponse).toList())
+				.messages(result.getMessages().stream()
+						.map(message -> toMessageResponse(
+								message,
+								result.getUnreadMemberCounts().get(message.getId())
+						))
+						.toList())
 				.nextCursor(nextCursor)
 				.hasNext(result.isHasNext())
 				.build();
 	}
 
 	public ChatMessageResponse toMessageResponse(ChatMessage message) {
+		return toMessageResponse(message, null);
+	}
+
+	public ChatMessageResponse toMessageResponse(ChatMessage message, Integer unreadMemberCount) {
 		return ChatMessageResponse.builder()
 				.id(message.getId())
 				.agitUuid(message.getAgitUuid())
@@ -34,6 +43,7 @@ public class ChatWebMapper {
 				.content(message.getContent())
 				.payload(message.getPayload())
 				.createdAt(message.getCreatedAt())
+				.unreadMemberCount(unreadMemberCount)
 				.build();
 	}
 }

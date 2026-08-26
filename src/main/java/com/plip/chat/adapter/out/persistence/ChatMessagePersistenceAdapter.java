@@ -2,6 +2,7 @@ package com.plip.chat.adapter.out.persistence;
 
 import com.plip.chat.application.port.out.ChatMessagePersistencePort;
 import com.plip.chat.domain.model.ChatMessage;
+import com.plip.chat.domain.model.MessageType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.domain.Sort;
@@ -53,6 +54,37 @@ public class ChatMessagePersistenceAdapter implements ChatMessagePersistencePort
 		}
 		query.with(Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("_id")));
 		query.limit(limit);
+		return mongoTemplate.find(query, ChatMessageMongoDocument.class).stream()
+				.map(chatMessagePersistenceMapper::toDomain)
+				.toList();
+	}
+
+	@Override
+	public long countUnread(UUID agitUuid, UUID userUuid, Instant readAt) {
+		Criteria criteria = Criteria.where("agitUuid").is(agitUuid.toString())
+				.and("type").is(MessageType.TALK.name())
+				.and("senderUuid").ne(userUuid.toString());
+		if (readAt != null) {
+			criteria = criteria.and("createdAt").gt(readAt);
+		}
+		return mongoTemplate.count(new Query(criteria), ChatMessageMongoDocument.class);
+	}
+
+	@Override
+	public List<ChatMessage> findTalkByAgitAndCreatedAtRange(
+			UUID agitUuid,
+			Instant afterExclusive,
+			Instant toInclusive,
+			UUID excludeSenderUuid
+	) {
+		Criteria criteria = Criteria.where("agitUuid").is(agitUuid.toString())
+				.and("type").is(MessageType.TALK.name())
+				.and("senderUuid").ne(excludeSenderUuid.toString())
+				.and("createdAt").lte(toInclusive);
+		if (afterExclusive != null) {
+			criteria = criteria.and("createdAt").gt(afterExclusive);
+		}
+		Query query = new Query(criteria);
 		return mongoTemplate.find(query, ChatMessageMongoDocument.class).stream()
 				.map(chatMessagePersistenceMapper::toDomain)
 				.toList();

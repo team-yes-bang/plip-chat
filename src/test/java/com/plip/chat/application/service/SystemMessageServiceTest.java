@@ -52,8 +52,8 @@ class SystemMessageServiceTest {
 				.containsEntry("eventType", SystemMessageEvents.MEMBER_JOINED)
 				.containsEntry("userUuid", userUuid.toString())
 				.containsEntry("nickname", "게스트");
-		assertThat(chatBroadcastPort.getPublished()).containsExactly(saved);
-		assertThat(chatStatePort.getLastChatAt(agitUuid)).isNull();
+		assertThat(chatBroadcastPort.getPublishedMessages()).containsExactly(saved);
+		assertThat(chatStatePort.getLastChatAt(agitUuid)).isEmpty();
 	}
 
 	@Test
@@ -63,7 +63,7 @@ class SystemMessageServiceTest {
 		ChatMessage saved = messageStore.findByAgitUuidOrderByCreatedAtDesc(agitUuid).get(0);
 		assertThat(saved.getContent()).isEqualTo("게스트님이 내보내졌습니다.");
 		assertThat(saved.getPayload()).containsEntry("eventType", SystemMessageEvents.MEMBER_BANNED);
-		assertThat(chatStatePort.getLastChatAt(agitUuid)).isNull();
+		assertThat(chatStatePort.getLastChatAt(agitUuid)).isEmpty();
 	}
 
 	@Test
@@ -75,8 +75,8 @@ class SystemMessageServiceTest {
 		assertThat(saved.getPayload())
 				.containsEntry("eventType", SystemMessageEvents.TOPIC_BOUND)
 				.containsEntry("topicId", "topic-1");
-		assertThat(chatBroadcastPort.getPublished()).containsExactly(saved);
-		assertThat(chatStatePort.getLastChatAt(agitUuid)).isNull();
+		assertThat(chatBroadcastPort.getPublishedMessages()).containsExactly(saved);
+		assertThat(chatStatePort.getLastChatAt(agitUuid)).isEmpty();
 	}
 
 	@Test
@@ -86,7 +86,7 @@ class SystemMessageServiceTest {
 		ChatMessage saved = messageStore.findByAgitUuidOrderByCreatedAtDesc(agitUuid).get(0);
 		assertThat(saved.getContent()).isEqualTo("토픽이 시작되었습니다.");
 		assertThat(saved.getPayload()).containsEntry("eventType", SystemMessageEvents.TOPIC_STARTED);
-		assertThat(chatStatePort.getLastChatAt(agitUuid)).isNull();
+		assertThat(chatStatePort.getLastChatAt(agitUuid)).isEmpty();
 	}
 
 	@Test
@@ -104,6 +104,6 @@ class SystemMessageServiceTest {
 		ChatMessage saved = messageStore.findByAgitUuidOrderByCreatedAtDesc(agitUuid).get(0);
 		assertThat(saved.getContent()).isEqualTo("게스트님이 퇴장했습니다.");
 		assertThat(saved.getPayload()).containsEntry("eventType", SystemMessageEvents.MEMBER_LEFT);
-		assertThat(chatStatePort.getLastChatAt(agitUuid)).isNull();
+		assertThat(chatStatePort.getLastChatAt(agitUuid)).isEmpty();
 	}
 }

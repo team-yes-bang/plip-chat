@@ -21,8 +21,13 @@ public class ChatBroadcastPayload {
 	private String content;
 	private Map<String, Object> payload;
 	private Instant createdAt;
+	private Integer unreadMemberCount;
 
 	public static ChatBroadcastPayload from(ChatMessage message) {
+		return from(message, null);
+	}
+
+	public static ChatBroadcastPayload from(ChatMessage message, Integer unreadMemberCount) {
 		return new ChatBroadcastPayload(
 				message.getId(),
 				message.getAgitUuid(),
@@ -30,7 +35,8 @@ public class ChatBroadcastPayload {
 				message.getType().name(),
 				message.getContent(),
 				message.getPayload(),
-				message.getCreatedAt()
+				message.getCreatedAt(),
+				unreadMemberCount
 		);
 	}
 }

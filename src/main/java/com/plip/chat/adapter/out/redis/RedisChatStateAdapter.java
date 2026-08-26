@@ -7,6 +7,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,6 +36,40 @@ public class RedisChatStateAdapter implements ChatStatePort {
 			return Optional.empty();
 		}
 		return Optional.of(Instant.parse(value.toString()));
+	}
+
+	@Override
+	public Optional<Instant> getLastChatAt(UUID agitUuid) {
+		Object value = redisTemplate.opsForHash().get(
+				WRITE_STATE_KEY_PREFIX + agitUuid,
+				LAST_CHAT_AT_FIELD
+		);
+		if (value == null) {
+			return Optional.empty();
+		}
+		return Optional.of(Instant.parse(value.toString()));
+	}
+
+	@Override
+	public Optional<Instant> getMemberReadAt(UUID agitUuid, UUID userUuid) {
+		Object value = redisTemplate.opsForHash().get(memberReadsKey(agitUuid), userUuid.toString());
+		if (value == null) {
+			return Optional.empty();
+		}
+		return Optional.of(Instant.parse(value.toString()));
+	}
+
+	@Override
+	public Map<UUID, Instant> getMemberReadAtMap(UUID agitUuid) {
+		Map<Object, Object> entries = redisTemplate.opsForHash().entries(memberReadsKey(agitUuid));
+		if (entries.isEmpty()) {
+			return Map.of();
+		}
+		Map<UUID, Instant> result = new HashMap<>();
+		for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+			result.put(UUID.fromString(entry.getKey().toString()), Instant.parse(entry.getValue().toString()));
+		}
+		return Map.copyOf(result);
 	}
 
 	@Override

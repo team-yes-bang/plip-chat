@@ -17,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -56,6 +57,39 @@ class ChatControllerTest {
 		agitStore.save(AgitRoomReference.create(agitUuid, "아지트", "", 5, null, userUuid, "호스트"));
 		messageStore.save(talkAt("2026-08-18T01:00:00Z", "안녕"));
 		memberReadEventPort.clear();
+	}
+
+	@Test
+	void getChatState_returnsUnreadCount() throws Exception {
+		UUID otherUuid = UUID.randomUUID();
+		agitStore.save(AgitRoomReference.reconstitute(
+				agitUuid,
+				"아지트",
+				"",
+				5,
+				null,
+				com.plip.chat.domain.model.AgitRoomStatus.ACTIVE,
+				List.of(
+						com.plip.chat.domain.model.AgitMemberReference.of(
+								userUuid, "me", null, com.plip.chat.domain.model.AgitMemberRole.HOST,
+								com.plip.chat.domain.model.AgitMemberStatus.ACTIVE
+						),
+						com.plip.chat.domain.model.AgitMemberReference.of(
+								otherUuid, "other", null, com.plip.chat.domain.model.AgitMemberRole.GUEST,
+								com.plip.chat.domain.model.AgitMemberStatus.ACTIVE
+						)
+				),
+				Instant.parse("2026-08-18T00:00:00Z")
+		));
+		messageStore.save(talkAt("2026-08-18T03:00:00Z", "new", otherUuid));
+		chatStatePort.updateLastChatAt(agitUuid, Instant.parse("2026-08-18T03:00:00Z"));
+
+		mockMvc.perform(get("/api/v1/agits/{agitUuid}/chat-state", agitUuid)
+						.header(ChatController.USER_UUID_HEADER, userUuid.toString()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.unreadMessageCount").value(1))
+				.andExpect(jsonPath("$.readAt").doesNotExist())
+				.andExpect(jsonPath("$.lastChatAt").exists());
 	}
 
 	@Test
@@ -147,7 +181,7 @@ class ChatControllerTest {
 				.andExpect(status().isNoContent());
 
 		assertThat(chatStatePort.getReadAt(userUuid, agitUuid)).contains(readAt);
-		assertThat(chatStatePort.getMemberReadAt(agitUuid, userUuid)).isEqualTo(readAt);
+		assertThat(chatStatePort.getMemberReadAt(agitUuid, userUuid)).contains(readAt);
 		assertThat(memberReadEventPort.getPublished()).hasSize(1);
 	}
 
@@ -200,10 +234,14 @@ class ChatControllerTest {
 	}
 
 	private ChatMessage talkAt(String createdAt, String content) {
+		return talkAt(createdAt, content, userUuid);
+	}
+
+	private ChatMessage talkAt(String createdAt, String content, UUID senderUuid) {
 		return ChatMessage.reconstitute(
 				UUID.randomUUID(),
 				agitUuid,
-				userUuid,
+				senderUuid,
 				MessageType.TALK,
 				content,
 				Map.of(),

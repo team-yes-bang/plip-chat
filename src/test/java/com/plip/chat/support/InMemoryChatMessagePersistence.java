@@ -2,6 +2,7 @@ package com.plip.chat.support;
 
 import com.plip.chat.application.port.out.ChatMessagePersistencePort;
 import com.plip.chat.domain.model.ChatMessage;
+import com.plip.chat.domain.model.MessageType;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -38,6 +39,32 @@ public class InMemoryChatMessagePersistence implements ChatMessagePersistencePor
 				.filter(message -> isBeforeCursor(message, cursorCreatedAt, cursorId))
 				.sorted(historyOrder())
 				.limit(limit)
+				.toList();
+	}
+
+	@Override
+	public long countUnread(UUID agitUuid, UUID userUuid, Instant readAt) {
+		return store.stream()
+				.filter(message -> message.getAgitUuid().equals(agitUuid))
+				.filter(message -> message.getType() == MessageType.TALK)
+				.filter(message -> !userUuid.equals(message.getSenderUuid()))
+				.filter(message -> readAt == null || message.getCreatedAt().isAfter(readAt))
+				.count();
+	}
+
+	@Override
+	public List<ChatMessage> findTalkByAgitAndCreatedAtRange(
+			UUID agitUuid,
+			Instant afterExclusive,
+			Instant toInclusive,
+			UUID excludeSenderUuid
+	) {
+		return store.stream()
+				.filter(message -> message.getAgitUuid().equals(agitUuid))
+				.filter(message -> message.getType() == MessageType.TALK)
+				.filter(message -> !excludeSenderUuid.equals(message.getSenderUuid()))
+				.filter(message -> !message.getCreatedAt().isAfter(toInclusive))
+				.filter(message -> afterExclusive == null || message.getCreatedAt().isAfter(afterExclusive))
 				.toList();
 	}
 

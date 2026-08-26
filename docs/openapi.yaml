@@ -23,6 +23,12 @@ paths:
         SockJS handshake에 1회만 사용할 수 있습니다.
       operationId: issueTicket
       responses:
+        "400":
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized
           content:
@@ -31,12 +37,6 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: Forbidden
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "400":
-          description: Bad Request
           content:
             '*/*':
               schema:
@@ -70,6 +70,12 @@ paths:
             schema:
               $ref: "#/components/schemas/MarkChatReadRequest"
       responses:
+        "400":
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized
           content:
@@ -82,14 +88,51 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "204":
+          description: No Content
+      security:
+      - bearerAuth: []
+  /api/v1/me/agits/chat-unread:
+    get:
+      tags:
+      - Chat
+      summary: 내 아지트 미읽음 TALK 배치 조회
+      description: 요청한 agitUuids 중 ACTIVE 멤버인 아지트만 unreadMessageCount를 반환합니다.
+      operationId: getMyAgitsChatUnread
+      parameters:
+      - name: agitUuids
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+      responses:
         "400":
           description: Bad Request
           content:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-        "204":
-          description: No Content
+        "401":
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MyAgitsChatUnreadResponse"
       security:
       - bearerAuth: []
   /api/v1/agits/{agitUuid}/messages:
@@ -127,6 +170,12 @@ paths:
           format: int32
           default: 20
       responses:
+        "400":
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized
           content:
@@ -135,12 +184,6 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: Forbidden
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "400":
-          description: Bad Request
           content:
             '*/*':
               schema:
@@ -153,13 +196,27 @@ paths:
                 $ref: "#/components/schemas/ChatHistoryResponse"
       security:
       - bearerAuth: []
-  /api/test:
+  /api/v1/agits/{agitUuid}/chat-state:
     get:
       tags:
-      - Health
-      summary: 기동 확인
-      operationId: test
+      - Chat
+      summary: 채팅 상태 조회
+      description: "ACTIVE 멤버의 readAt, lastChatAt, unreadMessageCount를 반환합니다."
+      operationId: getChatState
+      parameters:
+      - name: agitUuid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
+        "400":
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Unauthorized
           content:
@@ -172,8 +229,35 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ChatStateResponse"
+      security:
+      - bearerAuth: []
+  /api/test:
+    get:
+      tags:
+      - Health
+      summary: 기동 확인
+      operationId: test
+      responses:
         "400":
           description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
           content:
             '*/*':
               schema:
@@ -220,6 +304,27 @@ components:
           format: date-time
           description: 읽음 시각. 없으면 서버 시각(Instant.now()) 사용
           example: 2026-08-25T01:23:00Z
+    Item:
+      type: object
+      description: 아지트별 미읽음 TALK 개수
+      properties:
+        agitUuid:
+          type: string
+          format: uuid
+          description: 아지트 UUID
+        unreadMessageCount:
+          type: integer
+          format: int64
+          description: 미읽음 TALK 개수
+    MyAgitsChatUnreadResponse:
+      type: object
+      description: 아지트별 미읽음 TALK 개수 배치 응답
+      properties:
+        items:
+          type: array
+          description: ACTIVE 멤버인 아지트만 포함
+          items:
+            $ref: "#/components/schemas/Item"
     ChatCursorResponse:
       type: object
       description: 다음 페이지 커서
@@ -279,6 +384,26 @@ components:
           type: string
           format: date-time
           description: 생성 시각
+        unreadMemberCount:
+          type: integer
+          format: int32
+          description: 발신 TALK의 미읽음 멤버 수 (내 메시지에만 포함)
+    ChatStateResponse:
+      type: object
+      description: 아지트 채팅 상태
+      properties:
+        readAt:
+          type: string
+          format: date-time
+          description: 내 읽음 시각. 없으면 null
+        lastChatAt:
+          type: string
+          format: date-time
+          description: 마지막 TALK 시각. 없으면 null
+        unreadMessageCount:
+          type: integer
+          format: int64
+          description: 내가 읽지 않은 TALK 개수
   securitySchemes:
     bearerAuth:
       type: http

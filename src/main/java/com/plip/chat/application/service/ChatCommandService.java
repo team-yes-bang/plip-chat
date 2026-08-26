@@ -5,6 +5,7 @@ import com.plip.chat.application.port.in.SendMessageUseCase;
 import com.plip.chat.application.port.out.AgitReferenceQueryPort;
 import com.plip.chat.application.port.out.ChatBroadcastPort;
 import com.plip.chat.application.port.out.ChatMessagePersistencePort;
+import com.plip.chat.application.port.out.ChatReceiptPort;
 import com.plip.chat.application.port.out.ChatStatePort;
 import com.plip.chat.domain.model.ChatMessage;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class ChatCommandService implements SendMessageUseCase {
 	private final AgitReferenceQueryPort agitReferenceQueryPort;
 	private final ChatMessagePersistencePort chatMessagePersistencePort;
 	private final ChatStatePort chatStatePort;
+	private final ChatReceiptPort chatReceiptPort;
 	private final ChatBroadcastPort chatBroadcastPort;
 
 	@Override
@@ -33,8 +35,10 @@ public class ChatCommandService implements SendMessageUseCase {
 			throw new ChatAccessDeniedException();
 		}
 		ChatMessage saved = chatMessagePersistencePort.save(ChatMessage.talk(agitUuid, userUuid, content));
+		int unreadMemberCount = Math.max(0, agitReferenceQueryPort.countActiveMembers(agitUuid) - 1);
+		chatReceiptPort.initUnreadMemberCount(agitUuid, saved.getId(), unreadMemberCount);
 		chatStatePort.updateLastChatAt(agitUuid, saved.getCreatedAt());
-		chatBroadcastPort.publish(saved);
+		chatBroadcastPort.publish(saved, unreadMemberCount);
 		return saved;
 	}
 }

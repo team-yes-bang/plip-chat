@@ -70,7 +70,7 @@ Sample code may use `adaptor` / `vo` / `mysql`; **new code must use** `adapter` 
 1. Controllers and DTOs must use Springdoc annotations (`@Tag`, `@Operation`, `@Schema`).
 2. Request/response DTOs stay in `adapter.in.web.dto`.
 3. Domain models must not be REST response bodies.
-4. API spec review: [Gateway Swagger UI](http://192.168.10.144:8000/swagger-ui/index.html) (unified). Do not require committing `docs/openapi.yaml`.
+4. After API changes, ensure `OpenApiGeneratorTest` / `./gradlew test` refreshes `docs/openapi.yaml` and commit it.
 5. Event specs (when needed): `docs/events/{event-name}.v1.md`.
 
 ---

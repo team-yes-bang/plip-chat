@@ -29,4 +29,5 @@
 
 - [ ] `./gradlew test` 통과 (또는 로컬 동등 확인)
 - [ ] 정상 동작 확인
+- [ ] (API 변경 시) `docs/openapi.yaml` 갱신·커밋
 - [ ] (DDL 변경 시) `docs/sql/schema.sql` 갱신·커밋

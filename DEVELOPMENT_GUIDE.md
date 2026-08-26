@@ -73,8 +73,8 @@ src/main/java/com/plip/{service}/
 ### 3.1 REST (Springdoc OpenAPI)
 
 - Springdoc **코드 퍼스트**: Controller·DTO에 `@Tag`, `@Operation`, `@Schema`를 붙입니다.
-- `./gradlew test` 시 `OpenApiGeneratorTest`가 CI에서 함께 실행됩니다 (H2 `test` 프로필).
-- **API 명세 조회**: [Gateway Swagger UI](http://192.168.10.144:8000/swagger-ui/index.html) (서비스별 통합). repo `docs/openapi.yaml` 커밋은 **필수 아님** ([GIT_CONVENTION.md](GIT_CONVENTION.md)).
+- `./gradlew test` 실행 시 자동으로 `OpenApiGeneratorTest`가 `docs/openapi.yaml`을 갱신합니다.
+- API가 바뀌면 `docs/openapi.yaml`을 **함께 커밋**합니다.
 
 
 

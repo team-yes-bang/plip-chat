@@ -27,6 +27,9 @@ class ChatQueryServiceTest {
 	private InMemoryChatMessagePersistence messageStore;
 	private InMemoryChatStatePort chatStatePort;
 	private InMemoryMemberReadEventPort memberReadEventPort;
+	private TestChatReceiptConfig.InMemoryChatReceiptPort chatReceiptPort;
+	private ReadReceiptProjector readReceiptProjector;
+	private UnreadMemberCountCalculator unreadMemberCountCalculator;
 	private ChatQueryService chatQueryService;
 
 	private UUID agitUuid;
@@ -38,7 +41,22 @@ class ChatQueryServiceTest {
 		messageStore = new InMemoryChatMessagePersistence();
 		chatStatePort = new InMemoryChatStatePort();
 		memberReadEventPort = new InMemoryMemberReadEventPort();
-		chatQueryService = new ChatQueryService(agitStore, messageStore, chatStatePort, new TestChatReceiptConfig.InMemoryChatReceiptPort(), memberReadEventPort);
+		chatReceiptPort = new TestChatReceiptConfig.InMemoryChatReceiptPort();
+		unreadMemberCountCalculator = new UnreadMemberCountCalculator(agitStore, chatStatePort);
+		readReceiptProjector = new ReadReceiptProjector(
+				messageStore,
+				chatReceiptPort,
+				new TestChatReceiptConfig.InMemoryChatReceiptBroadcastPort(),
+				unreadMemberCountCalculator
+		);
+		chatQueryService = new ChatQueryService(
+				agitStore,
+				messageStore,
+				chatStatePort,
+				memberReadEventPort,
+				readReceiptProjector,
+				unreadMemberCountCalculator
+		);
 		agitUuid = UUID.randomUUID();
 		userUuid = UUID.randomUUID();
 	}
@@ -113,6 +131,114 @@ class ChatQueryServiceTest {
 
 		assertThat(chatStatePort.getReadAt(userUuid, agitUuid)).contains(second);
 		assertThat(memberReadEventPort.getPublished()).hasSize(2);
+	}
+
+	@Test
+	void markRead_decrementsUnreadMemberCountForNewlyReadMessages() {
+		UUID senderUuid = UUID.randomUUID();
+		UUID readerUuid = UUID.randomUUID();
+		seedActiveMember();
+		agitStore.save(AgitRoomReference.reconstitute(
+				agitUuid,
+				"아지트",
+				"",
+				5,
+				null,
+				com.plip.chat.domain.model.AgitRoomStatus.ACTIVE,
+				java.util.List.of(
+						com.plip.chat.domain.model.AgitMemberReference.of(
+								senderUuid,
+								"보낸이",
+								null,
+								com.plip.chat.domain.model.AgitMemberRole.HOST,
+								com.plip.chat.domain.model.AgitMemberStatus.ACTIVE
+						),
+						com.plip.chat.domain.model.AgitMemberReference.of(
+								readerUuid,
+								"읽은이",
+								null,
+								com.plip.chat.domain.model.AgitMemberRole.GUEST,
+								com.plip.chat.domain.model.AgitMemberStatus.ACTIVE
+						),
+						com.plip.chat.domain.model.AgitMemberReference.of(
+								UUID.randomUUID(),
+								"멤버1",
+								null,
+								com.plip.chat.domain.model.AgitMemberRole.GUEST,
+								com.plip.chat.domain.model.AgitMemberStatus.ACTIVE
+						),
+						com.plip.chat.domain.model.AgitMemberReference.of(
+								UUID.randomUUID(),
+								"멤버2",
+								null,
+								com.plip.chat.domain.model.AgitMemberRole.GUEST,
+								com.plip.chat.domain.model.AgitMemberStatus.ACTIVE
+						)
+				),
+				Instant.parse("2026-08-18T00:00:00Z")
+		));
+		ChatMessage message = messageStore.save(ChatMessage.reconstitute(
+				UUID.randomUUID(),
+				agitUuid,
+				senderUuid,
+				MessageType.TALK,
+				"hello",
+				Map.of(),
+				Instant.parse("2026-08-18T02:00:00Z")
+		));
+		chatReceiptPort.initUnreadMemberCount(agitUuid, message.getId(), 3);
+
+		chatQueryService.markRead(agitUuid, readerUuid, Instant.parse("2026-08-18T03:00:00Z"));
+
+		assertThat(chatReceiptPort.getUnreadMemberCount(agitUuid, message.getId())).hasValue(2);
+	}
+
+	@Test
+	void markRead_projectsReceiptsEvenWhenReadAtDoesNotAdvance() {
+		UUID senderUuid = UUID.randomUUID();
+		UUID readerUuid = UUID.randomUUID();
+		agitStore.save(AgitRoomReference.reconstitute(
+				agitUuid,
+				"아지트",
+				"",
+				5,
+				null,
+				com.plip.chat.domain.model.AgitRoomStatus.ACTIVE,
+				java.util.List.of(
+						com.plip.chat.domain.model.AgitMemberReference.of(
+								senderUuid,
+								"보낸이",
+								null,
+								com.plip.chat.domain.model.AgitMemberRole.HOST,
+								com.plip.chat.domain.model.AgitMemberStatus.ACTIVE
+						),
+						com.plip.chat.domain.model.AgitMemberReference.of(
+								readerUuid,
+								"읽은이",
+								null,
+								com.plip.chat.domain.model.AgitMemberRole.GUEST,
+								com.plip.chat.domain.model.AgitMemberStatus.ACTIVE
+						)
+				),
+				Instant.parse("2026-08-18T00:00:00Z")
+		));
+		ChatMessage message = messageStore.save(ChatMessage.reconstitute(
+				UUID.randomUUID(),
+				agitUuid,
+				senderUuid,
+				MessageType.TALK,
+				"hello",
+				Map.of(),
+				Instant.parse("2026-08-18T02:00:00Z")
+		));
+		Instant readAt = Instant.parse("2026-08-18T03:00:00Z");
+		chatStatePort.markRead(readerUuid, agitUuid, readAt);
+		chatReceiptPort.initUnreadMemberCount(agitUuid, message.getId(), 1);
+
+		chatQueryService.markRead(agitUuid, readerUuid, Instant.parse("2026-08-18T01:00:00Z"));
+
+		assertThat(chatReceiptPort.getUnreadMemberCount(agitUuid, message.getId())).hasValue(0);
+		assertThat(memberReadEventPort.getPublished()).hasSize(1);
 	}
 
 	@Test

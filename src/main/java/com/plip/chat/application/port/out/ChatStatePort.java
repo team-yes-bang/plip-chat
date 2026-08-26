@@ -9,6 +9,8 @@ public interface ChatStatePort {
 
 	Optional<Instant> getReadAt(UUID userUuid, UUID agitUuid);
 
+	Optional<Instant> getReceiptProjectedAt(UUID userUuid, UUID agitUuid);
+
 	Optional<Instant> getLastChatAt(UUID agitUuid);
 
 	Optional<Instant> getMemberReadAt(UUID agitUuid, UUID userUuid);
@@ -16,6 +18,8 @@ public interface ChatStatePort {
 	Map<UUID, Instant> getMemberReadAtMap(UUID agitUuid);
 
 	void markRead(UUID userUuid, UUID agitUuid, Instant readAt);
+
+	void setReceiptProjectedAt(UUID userUuid, UUID agitUuid, Instant projectedAt);
 
 	void updateLastChatAt(UUID agitUuid, Instant lastChatAt);
 }

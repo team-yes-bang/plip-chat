@@ -19,6 +19,7 @@ public class RedisChatStateAdapter implements ChatStatePort {
 
 	static final String READ_STATE_KEY_PREFIX = "user:read_state:";
 	static final String CHAT_FIELD_SUFFIX = ":chat";
+	static final String RECEIPT_PROJECTED_FIELD_SUFFIX = ":receipt_projected";
 	static final String WRITE_STATE_KEY_PREFIX = "agit:write_state:";
 	static final String MEMBER_READS_KEY_PREFIX = "agit:";
 	static final String MEMBER_READS_KEY_SUFFIX = ":member_reads";
@@ -31,6 +32,18 @@ public class RedisChatStateAdapter implements ChatStatePort {
 		Object value = redisTemplate.opsForHash().get(
 				READ_STATE_KEY_PREFIX + userUuid,
 				agitUuid + CHAT_FIELD_SUFFIX
+		);
+		if (value == null) {
+			return Optional.empty();
+		}
+		return Optional.of(Instant.parse(value.toString()));
+	}
+
+	@Override
+	public Optional<Instant> getReceiptProjectedAt(UUID userUuid, UUID agitUuid) {
+		Object value = redisTemplate.opsForHash().get(
+				READ_STATE_KEY_PREFIX + userUuid,
+				agitUuid + RECEIPT_PROJECTED_FIELD_SUFFIX
 		);
 		if (value == null) {
 			return Optional.empty();
@@ -84,6 +97,15 @@ public class RedisChatStateAdapter implements ChatStatePort {
 				memberReadsKey(agitUuid),
 				userUuid.toString(),
 				readAtValue
+		);
+	}
+
+	@Override
+	public void setReceiptProjectedAt(UUID userUuid, UUID agitUuid, Instant projectedAt) {
+		redisTemplate.opsForHash().put(
+				READ_STATE_KEY_PREFIX + userUuid,
+				agitUuid + RECEIPT_PROJECTED_FIELD_SUFFIX,
+				projectedAt.toString()
 		);
 	}
 

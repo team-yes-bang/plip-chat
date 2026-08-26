@@ -24,12 +24,18 @@ public class TestChatStateConfig {
 	public static class InMemoryChatStatePort implements ChatStatePort {
 
 		private final Map<String, Instant> readStateStore = new ConcurrentHashMap<>();
+		private final Map<String, Instant> receiptProjectedStore = new ConcurrentHashMap<>();
 		private final Map<String, Instant> memberReadsStore = new ConcurrentHashMap<>();
 		private final Map<UUID, Instant> lastChatAtStore = new ConcurrentHashMap<>();
 
 		@Override
 		public Optional<Instant> getReadAt(UUID userUuid, UUID agitUuid) {
 			return Optional.ofNullable(readStateStore.get(readStateKey(userUuid, agitUuid)));
+		}
+
+		@Override
+		public Optional<Instant> getReceiptProjectedAt(UUID userUuid, UUID agitUuid) {
+			return Optional.ofNullable(receiptProjectedStore.get(receiptProjectedKey(userUuid, agitUuid)));
 		}
 
 		@Override
@@ -61,12 +67,21 @@ public class TestChatStateConfig {
 		}
 
 		@Override
+		public void setReceiptProjectedAt(UUID userUuid, UUID agitUuid, Instant projectedAt) {
+			receiptProjectedStore.put(receiptProjectedKey(userUuid, agitUuid), projectedAt);
+		}
+
+		@Override
 		public void updateLastChatAt(UUID agitUuid, Instant lastChatAt) {
 			lastChatAtStore.put(agitUuid, lastChatAt);
 		}
 
 		private static String readStateKey(UUID userUuid, UUID agitUuid) {
 			return userUuid + ":" + agitUuid;
+		}
+
+		private static String receiptProjectedKey(UUID userUuid, UUID agitUuid) {
+			return userUuid + ":" + agitUuid + ":receipt";
 		}
 
 		private static String memberReadKey(UUID agitUuid, UUID userUuid) {

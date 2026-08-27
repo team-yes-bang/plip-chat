@@ -7,6 +7,7 @@ import com.plip.chat.domain.model.MessageType;
 import com.plip.chat.support.InMemoryAgitReferencePersistence;
 import com.plip.chat.support.InMemoryChatMessagePersistence;
 import com.plip.chat.support.TestChatBroadcastConfig.InMemoryChatBroadcastPort;
+import com.plip.chat.support.TestChatMessageEventConfig;
 import com.plip.chat.support.TestChatReceiptConfig;
 import com.plip.chat.support.TestChatStateConfig.InMemoryChatStatePort;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +40,8 @@ class ChatCommandServiceTest {
 				messageStore,
 				chatStatePort,
 				new TestChatReceiptConfig.InMemoryChatReceiptPort(),
-				chatBroadcastPort
+				chatBroadcastPort,
+				new TestChatMessageEventConfig.NoOpChatMessageEventPort()
 		);
 		agitUuid = UUID.randomUUID();
 		userUuid = UUID.randomUUID();
@@ -67,7 +69,8 @@ class ChatCommandServiceTest {
 				messageStore,
 				chatStatePort,
 				chatReceiptPort,
-				chatBroadcastPort
+				chatBroadcastPort,
+				new TestChatMessageEventConfig.NoOpChatMessageEventPort()
 		);
 
 		ChatMessage saved = chatCommandService.sendTalk(agitUuid, userUuid, "안녕");

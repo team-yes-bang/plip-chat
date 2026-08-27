@@ -4,6 +4,7 @@ import com.plip.chat.application.exception.ChatAccessDeniedException;
 import com.plip.chat.application.port.in.SendMessageUseCase;
 import com.plip.chat.application.port.out.AgitReferenceQueryPort;
 import com.plip.chat.application.port.out.ChatBroadcastPort;
+import com.plip.chat.application.port.out.ChatMessageEventPort;
 import com.plip.chat.application.port.out.ChatMessagePersistencePort;
 import com.plip.chat.application.port.out.ChatReceiptPort;
 import com.plip.chat.application.port.out.ChatStatePort;
@@ -22,6 +23,7 @@ public class ChatCommandService implements SendMessageUseCase {
 	private final ChatStatePort chatStatePort;
 	private final ChatReceiptPort chatReceiptPort;
 	private final ChatBroadcastPort chatBroadcastPort;
+	private final ChatMessageEventPort chatMessageEventPort;
 
 	@Override
 	public ChatMessage sendTalk(UUID agitUuid, UUID userUuid, String content) {
@@ -39,6 +41,7 @@ public class ChatCommandService implements SendMessageUseCase {
 		chatReceiptPort.initUnreadMemberCount(agitUuid, saved.getId(), unreadMemberCount);
 		chatStatePort.updateLastChatAt(agitUuid, saved.getCreatedAt());
 		chatBroadcastPort.publish(saved, unreadMemberCount);
+		chatMessageEventPort.publishMessageSent(saved);
 		return saved;
 	}
 }
